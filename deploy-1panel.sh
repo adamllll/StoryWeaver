@@ -104,9 +104,12 @@ select_deploy_path() {
     log_success "部署路径: $DEPLOY_PATH"
 }
 
-# 创建部署目录
-create_deploy_dir() {
-    log_info "创建部署目录..."
+# 准备部署目录（只检查，不创建，让 git clone 自己创建）
+prepare_deploy_dir() {
+    log_info "检查部署目录..."
+
+    # 确保父目录存在
+    mkdir -p "$(dirname $DEPLOY_PATH)"
 
     if [ -d "$DEPLOY_PATH" ]; then
         log_warning "目录已存在: $DEPLOY_PATH"
@@ -120,32 +123,48 @@ create_deploy_dir() {
         fi
     fi
 
-    mkdir -p "$DEPLOY_PATH"
-    log_success "目录创建成功"
+    log_success "部署目录准备完成"
 }
 
-# 检查 SSH 密钥
+# 检查 SSH 配置
 check_ssh_key() {
-    log_info "检查 SSH 密钥配置..."
+    log_info "检查 SSH 连接..."
 
-    # 检查是否有 SSH 密钥
-    if [ ! -f ~/.ssh/id_rsa ] && [ ! -f ~/.ssh/id_ed25519 ]; then
-        log_error "未找到 SSH 密钥！"
+    # 直接测试 GitHub SSH 连接（这样可以支持任何密钥配置方式）
+    log_info "测试 GitHub SSH 连接..."
+    local ssh_result
+    ssh_result=$(ssh -T git@github.com 2>&1)
+
+    if echo "$ssh_result" | grep -q "successfully authenticated"; then
+        log_success "SSH 连接正常"
+        return 0
+    elif echo "$ssh_result" | grep -q "Permission denied"; then
+        log_error "SSH 认证失败！"
         echo ""
-        echo -e "${YELLOW}请先配置 SSH 密钥：${NC}"
-        echo "  1. 生成密钥: ssh-keygen -t ed25519 -C 'your_email@example.com'"
-        echo "  2. 查看公钥: cat ~/.ssh/id_ed25519.pub"
-        echo "  3. 添加到 GitHub: https://github.com/settings/keys"
+        echo -e "${YELLOW}请检查以下配置：${NC}"
+        echo ""
+        echo "1. 查看现有密钥："
+        echo "   ls -la ~/.ssh/"
+        echo ""
+        echo "2. 如果密钥名不是默认的 id_rsa/id_ed25519，需要配置 SSH："
+        echo "   cat > ~/.ssh/config << 'EOF'"
+        echo "   Host github.com"
+        echo "       HostName github.com"
+        echo "       User git"
+        echo "       IdentityFile ~/.ssh/你的私钥文件名"
+        echo "       IdentitiesOnly yes"
+        echo "   EOF"
+        echo ""
+        echo "3. 确保私钥权限正确："
+        echo "   chmod 600 ~/.ssh/你的私钥文件名"
+        echo "   chmod 600 ~/.ssh/config"
+        echo ""
+        echo "4. 确保公钥已添加到 GitHub："
+        echo "   https://github.com/settings/keys"
         echo ""
         exit 1
-    fi
-
-    # 测试 GitHub SSH 连接
-    log_info "测试 GitHub SSH 连接..."
-    if ssh -T git@github.com 2>&1 | grep -q "successfully authenticated"; then
-        log_success "SSH 连接正常"
     else
-        log_warning "SSH 连接测试返回非预期结果，继续尝试克隆..."
+        log_warning "SSH 连接返回非预期结果，继续尝试..."
     fi
 }
 
@@ -153,22 +172,24 @@ check_ssh_key() {
 clone_project() {
     log_info "使用 SSH 克隆项目代码..."
 
-    cd "$(dirname $DEPLOY_PATH)"
+    local parent_dir=$(dirname "$DEPLOY_PATH")
+    local dir_name=$(basename "$DEPLOY_PATH")
 
-    if git clone git@github.com:adamllll/StoryWeaver.git storyweaver; then
+    cd "$parent_dir"
+
+    if git clone git@github.com:adamllll/StoryWeaver.git "$dir_name"; then
         log_success "SSH 克隆成功"
     else
         log_error "SSH 克隆失败！"
         echo ""
         echo -e "${YELLOW}可能的原因：${NC}"
-        echo "  1. SSH 密钥未添加到 GitHub"
+        echo "  1. SSH 密钥未正确配置"
         echo "  2. 网络无法访问 GitHub"
         echo "  3. 仓库不存在或无权限访问"
         echo ""
         echo -e "${YELLOW}排查步骤：${NC}"
         echo "  - 测试连接: ssh -T git@github.com"
-        echo "  - 查看公钥: cat ~/.ssh/id_ed25519.pub 或 cat ~/.ssh/id_rsa.pub"
-        echo "  - 添加到 GitHub: https://github.com/settings/keys"
+        echo "  - 检查 SSH 配置: cat ~/.ssh/config"
         echo ""
         exit 1
     fi
@@ -366,7 +387,7 @@ main() {
 
     # 部署流程
     select_deploy_path
-    create_deploy_dir
+    prepare_deploy_dir
     clone_project
     generate_jwt_key
     configure_env

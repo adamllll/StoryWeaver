@@ -69,7 +69,7 @@ class TestCreateChapter:
             f"/api/novels/{test_novel.id}/chapters",
             json={"title": "新章节"},
         )
-        assert response.status_code == 403
+        assert response.status_code == 401
 
     @pytest.mark.unit
     def test_create_chapter_not_owner(self, client, test_novel, test_user2, db):

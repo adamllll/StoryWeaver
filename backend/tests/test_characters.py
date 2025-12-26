@@ -74,7 +74,7 @@ class TestCreateCharacter:
             f"/api/novels/{test_novel.id}/characters",
             json={"name": "新角色", "role_type": "主角"},
         )
-        assert response.status_code == 403
+        assert response.status_code == 401
 
     def test_create_character_not_owner(self, client, test_novel, test_user2):
         """测试非作者创建角色"""
@@ -245,7 +245,7 @@ class TestCreateWorldSetting:
             f"/api/novels/{test_novel.id}/world-settings",
             json={"setting_type": "力量体系", "name": "修炼体系"},
         )
-        assert response.status_code == 403
+        assert response.status_code == 401
 
     def test_create_world_setting_not_owner(self, client, test_novel, test_user2):
         """测试非作者创建世界观"""

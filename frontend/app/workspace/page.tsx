@@ -349,7 +349,7 @@ export default function WorkspacePage() {
       {/* 页脚 */}
       <footer className="glass border-t border-white/40 py-8">
         <div className="container text-center text-gray-500">
-          <p>© 2024 织梦者 (StoryWeaver). AI 辅助应用开发课程设计项目.</p>
+          <p>© 2025 织梦者 (StoryWeaver). AI 辅助应用开发课程设计项目.</p>
         </div>
       </footer>
     </div>

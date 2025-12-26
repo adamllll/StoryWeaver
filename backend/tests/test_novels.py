@@ -105,7 +105,7 @@ class TestCreateNovel:
             "/api/novels",
             json={"title": "新小说", "category": "科幻"}
         )
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 @pytest.mark.unit
@@ -159,7 +159,7 @@ class TestUpdateNovel:
             f"/api/novels/{test_novel.id}",
             json={"title": "更新后的标题"}
         )
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_update_novel_not_owner(self, client, test_novel, test_user2):
         """测试非作者更新小说"""

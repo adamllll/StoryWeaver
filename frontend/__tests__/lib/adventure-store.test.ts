@@ -194,7 +194,8 @@ describe('useAdventureStore', () => {
 
       const state = useAdventureStore.getState();
       expect(state.rollResult).toEqual(mockChoiceResponse);
-      expect(state.isRolling).toBe(false);
+      // isRolling 在动画期间保持为 true，3.5s 后才变为 false
+      expect(state.isRolling).toBe(true);
     });
 
     it('should update state after 3.5s timeout', async () => {

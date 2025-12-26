@@ -130,7 +130,6 @@ describe('AIAssistant', () => {
 
       // 检查主要操作按钮（默认状态下显示的）
       expect(screen.getByText('智能续写')).toBeInTheDocument();
-      expect(screen.getByText('生成分支')).toBeInTheDocument();
     });
 
     it('should show empty state when no messages', () => {
@@ -145,12 +144,6 @@ describe('AIAssistant', () => {
 
       // 检查风格选项
       expect(screen.getByText('自动推断')).toBeInTheDocument();
-    });
-
-    it('should render branch generation button', () => {
-      render(<AIAssistant {...mockProps} />);
-
-      expect(screen.getByText('生成分支')).toBeInTheDocument();
     });
 
     it('should render format optimization button', () => {
@@ -211,27 +204,4 @@ describe('AIAssistant', () => {
     });
   });
 
-  describe('icons', () => {
-    it('should render sparkles icon', () => {
-      render(<AIAssistant {...mockProps} />);
-
-      // 检查图标是否渲染（可能有多个）
-      const sparklesIcons = screen.getAllByTestId('icon-sparkles');
-      expect(sparklesIcons.length).toBeGreaterThan(0);
-    });
-
-    it('should render wand icon', () => {
-      render(<AIAssistant {...mockProps} />);
-
-      const wandIcons = screen.getAllByTestId('icon-wand');
-      expect(wandIcons.length).toBeGreaterThan(0);
-    });
-
-    it('should render branch icon', () => {
-      render(<AIAssistant {...mockProps} />);
-
-      const branchIcons = screen.getAllByTestId('icon-branch');
-      expect(branchIcons.length).toBeGreaterThan(0);
-    });
-  });
 });

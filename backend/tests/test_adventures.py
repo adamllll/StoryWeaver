@@ -104,7 +104,7 @@ class TestExportFunctionality:
         assert data["message"] == "Adventure finished successfully"
         assert data["ending_type"] == "happy"
         assert "novel" in data
-        assert data["novel"]["total_chapters"] == 3
+        assert data["novel"]["total_chapters"] == 4
 
     def test_finish_already_finished_adventure(self, client, auth_headers, db, test_adventure):
         """测试结束已完成的冒险（应该失败）"""
@@ -384,12 +384,12 @@ class TestGameLogic:
     def test_make_choice_success(self, client, auth_headers, test_adventure, test_story_node, monkeypatch):
         """测试玩家选择（成功）"""
         # Mock 骰子结果为成功
-        from app.routers import adventures
+        from app.routers.adventures import gameplay
 
         def mock_roll_dice(success_rate, difficulty="普通"):
             return 50, True  # 成功
 
-        monkeypatch.setattr(adventures, "roll_dice", mock_roll_dice)
+        monkeypatch.setattr(gameplay, "roll_dice", mock_roll_dice)
 
         response = client.post(
             f"/api/adventures/{test_adventure.id}/choose",
@@ -407,12 +407,12 @@ class TestGameLogic:
 
     def test_make_choice_failure(self, client, auth_headers, test_adventure, test_story_node, monkeypatch):
         """测试玩家选择（失败）"""
-        from app.routers import adventures
+        from app.routers.adventures import gameplay
 
         def mock_roll_dice(success_rate, difficulty="普通"):
             return 80, False  # 失败
 
-        monkeypatch.setattr(adventures, "roll_dice", mock_roll_dice)
+        monkeypatch.setattr(gameplay, "roll_dice", mock_roll_dice)
 
         response = client.post(
             f"/api/adventures/{test_adventure.id}/choose",

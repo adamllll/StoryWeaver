@@ -274,7 +274,7 @@ export default function HomePage() {
             <span className="font-semibold text-gray-700">织梦者</span>
           </div>
           <div className="text-sm text-gray-500">
-            © 2024 StoryWeaver. Powered by Gemini & Claude.
+            © 2025 StoryWeaver. Powered by Gemini & Claude.
           </div>
         </div>
       </footer>

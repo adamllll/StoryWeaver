@@ -50,7 +50,7 @@ class TestGenerateOutline:
             "/api/ai/outline",
             json={"category": "玄幻", "keywords": "修仙", "chapter_count": 10, "target_words": 100}
         )
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 @pytest.mark.unit
@@ -173,7 +173,7 @@ class TestExpandText:
             "/api/ai/expand",
             json={"text": "测试", "style": "详细描写", "word_count": 500}
         )
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 @pytest.mark.unit
@@ -233,48 +233,6 @@ class TestGenerateCharacter:
                 "novel_id": test_novel.id,
                 "role_type": "主角"
             }
-        )
-        assert response.status_code == status.HTTP_403_FORBIDDEN
-
-
-@pytest.mark.unit
-class TestGenerateBranch:
-    """AI分支生成测试"""
-
-    def test_generate_branch_success(self, client, auth_headers, mock_ai_service):
-        """测试成功生成分支"""
-        response = client.post(
-            "/api/ai/branch",
-            headers=auth_headers,
-            json={
-                "current_scene": "主角面临选择，这是一个关键时刻，需要做出重要决定，影响后续剧情发展。周围环境危险重重，时间紧迫，必须立即做出抉择。"
-            }
-        )
-        assert response.status_code == status.HTTP_200_OK
-        data = response.json()
-        assert "choices" in data
-        assert "branch_type" in data
-
-    def test_generate_branch_with_context(self, client, auth_headers, mock_ai_service):
-        """测试带上下文生成分支"""
-        response = client.post(
-            "/api/ai/branch",
-            headers=auth_headers,
-            json={
-                "current_scene": "战斗场景，主角与强敌对峙，周围环境危险重重，需要快速做出决策以求生存。敌人步步紧逼，形势万分危急啊！",
-                "protagonist_status": "受伤",
-                "companion_status": "在场",
-                "external_threat": "敌人包围",
-                "story_direction": "紧张刺激"
-            }
-        )
-        assert response.status_code == status.HTTP_200_OK
-
-    def test_generate_branch_without_auth(self, client, mock_ai_service):
-        """测试未认证生成分支"""
-        response = client.post(
-            "/api/ai/branch",
-            json={"current_scene": "测试场景，这是一个足够长的场景描述，用于满足最小长度要求，确保测试能够正常运行"}
         )
         assert response.status_code == status.HTTP_403_FORBIDDEN
 

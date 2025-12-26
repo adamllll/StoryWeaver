@@ -2,7 +2,8 @@
 #############################################
 # StoryWeaver 一键部署脚本 - 1Panel 专用版
 # 作者：Claude Code + 哈雷酱 (￣▽￣)ノ
-# 版本：1.0.0
+# 版本：1.1.0
+# 特性：SSH-only 部署，需要配置 GitHub SSH 密钥
 #############################################
 
 set -e  # 遇到错误立即退出
@@ -123,23 +124,53 @@ create_deploy_dir() {
     log_success "目录创建成功"
 }
 
+# 检查 SSH 密钥
+check_ssh_key() {
+    log_info "检查 SSH 密钥配置..."
+
+    # 检查是否有 SSH 密钥
+    if [ ! -f ~/.ssh/id_rsa ] && [ ! -f ~/.ssh/id_ed25519 ]; then
+        log_error "未找到 SSH 密钥！"
+        echo ""
+        echo -e "${YELLOW}请先配置 SSH 密钥：${NC}"
+        echo "  1. 生成密钥: ssh-keygen -t ed25519 -C 'your_email@example.com'"
+        echo "  2. 查看公钥: cat ~/.ssh/id_ed25519.pub"
+        echo "  3. 添加到 GitHub: https://github.com/settings/keys"
+        echo ""
+        exit 1
+    fi
+
+    # 测试 GitHub SSH 连接
+    log_info "测试 GitHub SSH 连接..."
+    if ssh -T git@github.com 2>&1 | grep -q "successfully authenticated"; then
+        log_success "SSH 连接正常"
+    else
+        log_warning "SSH 连接测试返回非预期结果，继续尝试克隆..."
+    fi
+}
+
 # 克隆项目
 clone_project() {
-    log_info "克隆项目代码..."
+    log_info "使用 SSH 克隆项目代码..."
 
     cd "$(dirname $DEPLOY_PATH)"
 
-    # 优先尝试 SSH，失败则用 HTTPS
-    log_info "尝试使用 SSH 克隆..."
-    if git clone git@github.com:adamllll/StoryWeaver.git storyweaver 2>/dev/null; then
+    if git clone git@github.com:adamllll/StoryWeaver.git storyweaver; then
         log_success "SSH 克隆成功"
     else
-        log_warning "SSH 克隆失败，尝试 HTTPS..."
-        if ! git clone https://github.com/adamllll/StoryWeaver.git storyweaver; then
-            log_error "克隆失败！请检查网络连接或 SSH 密钥配置"
-            exit 1
-        fi
-        log_success "HTTPS 克隆成功"
+        log_error "SSH 克隆失败！"
+        echo ""
+        echo -e "${YELLOW}可能的原因：${NC}"
+        echo "  1. SSH 密钥未添加到 GitHub"
+        echo "  2. 网络无法访问 GitHub"
+        echo "  3. 仓库不存在或无权限访问"
+        echo ""
+        echo -e "${YELLOW}排查步骤：${NC}"
+        echo "  - 测试连接: ssh -T git@github.com"
+        echo "  - 查看公钥: cat ~/.ssh/id_ed25519.pub 或 cat ~/.ssh/id_rsa.pub"
+        echo "  - 添加到 GitHub: https://github.com/settings/keys"
+        echo ""
+        exit 1
     fi
 
     cd "$DEPLOY_PATH"
@@ -331,6 +362,7 @@ main() {
     # 检查环境
     check_root
     check_commands
+    check_ssh_key
 
     # 部署流程
     select_deploy_path

@@ -107,9 +107,9 @@ cat > "$DEPLOY_PATH/frontend/.env.local" << EOF
 NEXT_PUBLIC_API_URL=$PROTOCOL://$DOMAIN/api
 EOF
 
-# 创建数据目录
-mkdir -p "$DEPLOY_PATH/backend/data"
-chmod 755 "$DEPLOY_PATH/backend/data"
+# 创建数据目录（注意：docker-compose 挂载的是 ./data 不是 ./backend/data）
+mkdir -p "$DEPLOY_PATH/data"
+chmod 777 "$DEPLOY_PATH/data"
 
 log_success "配置完成"
 

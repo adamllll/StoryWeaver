@@ -6,9 +6,14 @@ const nextConfig = {
   // 启用独立输出模式（Docker 部署优化）
   output: 'standalone',
 
-  // API rewrites to backend
+  // API rewrites to backend (仅开发环境使用)
   async rewrites() {
-    // 使用环境变量支持不同部署环境
+    // 生产环境通过 Nginx/OpenResty 反向代理，不需要 Next.js rewrites
+    if (process.env.NODE_ENV === 'production') {
+      return [];
+    }
+
+    // 开发环境使用 rewrites 代理到本地后端
     const backendUrl = process.env.BACKEND_URL || "http://localhost:8000";
     return [
       {

@@ -102,10 +102,8 @@ FRONTEND_URL=$PROTOCOL://$DOMAIN
 AI_REQUESTS_PER_MINUTE=5
 EOF
 
-# 写前端配置
-cat > "$DEPLOY_PATH/frontend/.env.local" << EOF
-NEXT_PUBLIC_API_URL=$PROTOCOL://$DOMAIN/api
-EOF
+# 前端不需要 .env.local（生产环境使用相对路径 /api，由 OpenResty 代理）
+# 如果需要配置，在 docker-compose.yml 的 environment 中设置
 
 # 创建数据目录（注意：docker-compose 挂载的是 ./data 不是 ./backend/data）
 mkdir -p "$DEPLOY_PATH/data"

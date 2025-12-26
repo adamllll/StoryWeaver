@@ -129,9 +129,17 @@ clone_project() {
 
     cd "$(dirname $DEPLOY_PATH)"
 
-    if ! git clone https://github.com/adamllll/StoryWeaver.git storyweaver; then
-        log_error "克隆失败！请检查网络连接"
-        exit 1
+    # 优先尝试 SSH，失败则用 HTTPS
+    log_info "尝试使用 SSH 克隆..."
+    if git clone git@github.com:adamllll/StoryWeaver.git storyweaver 2>/dev/null; then
+        log_success "SSH 克隆成功"
+    else
+        log_warning "SSH 克隆失败，尝试 HTTPS..."
+        if ! git clone https://github.com/adamllll/StoryWeaver.git storyweaver; then
+            log_error "克隆失败！请检查网络连接或 SSH 密钥配置"
+            exit 1
+        fi
+        log_success "HTTPS 克隆成功"
     fi
 
     cd "$DEPLOY_PATH"

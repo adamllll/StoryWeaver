@@ -1,24 +1,18 @@
 # 前端 Dockerfile - 针对 2GB 内存服务器优化
 # 使用多阶段构建：构建阶段 + 生产运行阶段
 
-# ========== 依赖安装阶段 ==========
-FROM node:20-alpine AS deps
+# ========== 构建阶段 ==========
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
 # 复制依赖配置文件
 COPY package.json package-lock.json* ./
 
-# 安装生产依赖
-RUN npm ci --only=production
+# 安装所有依赖（包括devDependencies，构建时需要）
+RUN npm ci
 
-# ========== 构建阶段 ==========
-FROM node:20-alpine AS builder
-
-WORKDIR /app
-
-# 复制依赖
-COPY --from=deps /app/node_modules ./node_modules
+# 复制源代码
 COPY . .
 
 # 设置生产环境变量

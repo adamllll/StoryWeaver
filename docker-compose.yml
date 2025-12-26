@@ -46,7 +46,8 @@ services:
       - "3000:3000"  # 暴露给 OpenResty 反向代理
     environment:
       - NODE_ENV=production
-      - NEXT_PUBLIC_API_URL=http://backend:8000/api
+      # 注意：不要设置 NEXT_PUBLIC_API_URL！
+      # 前端会使用相对路径 /api，由 OpenResty 代理到后端
       - BACKEND_URL=http://backend:8000
     deploy:
       resources:

@@ -46,6 +46,12 @@ cd backend && source venv/bin/activate && python -m pytest --pylint  # Backend (
 
 # Build
 cd frontend && npm run build            # Next.js production build
+
+# Docker commands
+docker build -t storyweaver-backend:latest ./backend   # Build backend image
+docker build -t storyweaver-frontend:latest ./frontend # Build frontend image
+docker-compose up -d                    # Start all services with Docker Compose
+docker-compose down                     # Stop all Docker services
 ```
 
 ### Database Operations
@@ -435,6 +441,29 @@ Task(subagent_type="Explore", prompt="Explore the codebase structure and explain
 - Frontend and backend origins must match in `backend/app/main.py` (lines 83-91)
 - Ensure `FRONTEND_URL` in backend `.env` includes the frontend URL
 
+### Docker Build Fails
+
+**Symptom**: Frontend Docker build fails with `Cannot find module 'autoprefixer'` or similar devDependency errors
+
+**Root Cause**: Builder stage missing devDependencies (TypeScript, PostCSS, etc.) required for Next.js build
+
+**Solution**: Ensure `frontend/Dockerfile` builder stage uses `npm ci` (NOT `npm ci --only=production`)
+
+**Correct Pattern**:
+```dockerfile
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY package.json package-lock.json* ./
+RUN npm ci  # Install ALL dependencies (including devDependencies)
+COPY . .
+RUN npm run build
+```
+
+**Why This Works**:
+- Build stage needs devDependencies (TypeScript compiler, PostCSS plugins, etc.)
+- Runtime stage uses Next.js standalone output (no devDependencies needed)
+- Final image remains lightweight despite full build dependencies
+
 ---
 
 ## Important Files Reference
@@ -493,6 +522,7 @@ Task(subagent_type="Explore", prompt="Explore the codebase structure and explain
 - Interactive branching system
 - Character & world settings management
 - Reading interface
+- Docker containerization (frontend + backend)
 
 **In Progress** 🔄:
 - Unit test coverage
@@ -504,7 +534,6 @@ Task(subagent_type="Explore", prompt="Explore the codebase structure and explain
 - Consistency validation (detect plot contradictions)
 - Export to TXT/PDF
 - Reading statistics dashboard
-- Docker containerization
 
 ---
 
@@ -518,7 +547,7 @@ Task(subagent_type="Explore", prompt="Explore the codebase structure and explain
 
 ---
 
-**Last Updated**: 2025-12-24
+**Last Updated**: 2025-12-26
 **Project Version**: 1.0.0
 **Maintained By**: Course Project Team
 

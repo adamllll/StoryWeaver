@@ -224,9 +224,9 @@ export default function WorkspacePage() {
               >
                 {/* 封面区域 */}
                 <div className="relative aspect-[16/9] bg-gradient-to-br from-purple-100 to-purple-50 flex items-center justify-center">
-                  {(novel.cover_url || novel.cover_image) ? (
+                  {novel.cover_url ? (
                     <img
-                      src={novel.cover_url || novel.cover_image}
+                      src={novel.cover_url}
                       alt={novel.title}
                       className="w-full h-full object-cover"
                     />

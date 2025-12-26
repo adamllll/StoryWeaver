@@ -21,7 +21,6 @@ import {
   Loader2,
   BookmarkPlus,
   Play,
-  ChevronRight,
   Sparkles,
   Share2,
   Info,
@@ -31,7 +30,6 @@ import { motion } from "framer-motion";
 import { novelsApi, NovelDetail, ApiError } from "@/lib/api";
 import { useToast } from "@/components/ui/use-toast";
 import { markdownToHtml } from "@/lib/markdown";
-import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/lib/store";
 
 export default function NovelDetailPage() {
@@ -81,10 +79,10 @@ export default function NovelDetailPage() {
     <div className="min-h-screen bg-ios-bg relative overflow-x-hidden">
       {/* 沉浸式模糊背景 */}
       <div className="absolute inset-0 h-[60vh] overflow-hidden z-0">
-        {novel.cover_image && (
-          <div 
+        {novel.cover_url && (
+          <div
             className="w-full h-full bg-cover bg-center opacity-30 blur-[100px] scale-110"
-            style={{ backgroundImage: `url(${novel.cover_image})` }}
+            style={{ backgroundImage: `url(${novel.cover_url})` }}
           />
         )}
         <div className="absolute inset-0 bg-gradient-to-b from-transparent to-ios-bg" />
@@ -130,9 +128,9 @@ export default function NovelDetailPage() {
             <div className="glass rounded-ios-2xl p-6 shadow-ios-float bg-white/60 backdrop-blur-xl border-white/60">
               {/* 封面图 */}
               <div className="relative aspect-[3/4] rounded-ios-xl overflow-hidden shadow-lg mb-6 group">
-                {novel.cover_image ? (
+                {novel.cover_url ? (
                   <img
-                    src={novel.cover_image}
+                    src={novel.cover_url}
                     alt={novel.title}
                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                   />

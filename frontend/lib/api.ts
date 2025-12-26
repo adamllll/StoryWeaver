@@ -2,17 +2,16 @@
  * 织梦者后端 API 客户端
  */
 
-import { 
-  Adventure, 
-  AdventureListResponse, 
-  CreateAdventureRequest, 
-  ChoiceRequest, 
-  ChoiceResponse, 
-  StoryNode, 
-  OpeningGenerationRequest, 
-  OpeningGenerationResponse, 
-  StoryNodeGenerationRequest, 
-  StoryNodeGenerationResponse 
+import {
+  Adventure,
+  CreateAdventureRequest,
+  ChoiceRequest,
+  ChoiceResponse,
+  StoryNode,
+  OpeningGenerationRequest,
+  OpeningGenerationResponse,
+  StoryNodeGenerationRequest,
+  StoryNodeGenerationResponse
 } from './adventure-types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "/api";
@@ -287,7 +286,7 @@ export const novelsApi = {
     title: string;
     description?: string;
     category: string;
-    cover_image?: string;
+    cover_url?: string;
     outline?: string; // AI 生成的大纲
   }) => apiClient.post<NovelDetail>("/novels", data),
 
@@ -295,7 +294,7 @@ export const novelsApi = {
     title: string;
     description: string;
     category: string;
-    cover_image: string;
+    cover_url: string;
   }>) => apiClient.put<NovelDetail>(`/novels/${id}`, data),
 
   publish: (id: number, publish: boolean) =>

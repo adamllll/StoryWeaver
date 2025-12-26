@@ -13,25 +13,23 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { 
-  BookOpen, 
-  Search, 
-  Filter, 
-  Loader2, 
-  User, 
-  Clock, 
-  FileText, 
+import {
+  BookOpen,
+  Search,
+  Filter,
+  User,
+  Clock,
+  FileText,
   LogOut,
   Sparkles,
   ArrowRight
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { novelsApi, Novel, ApiError } from "@/lib/api";
 import { useAuthStore } from "@/lib/store";
 import { useToast } from "@/components/ui/use-toast";
 import { SkeletonNovelList } from "@/components/ui/skeleton";
 import { CategorySelect } from "@/components/ui/category-select";
-import { cn } from "@/lib/utils";
 
 const CATEGORIES = [
   { value: "", label: "全部分类" },
@@ -255,9 +253,9 @@ export default function NovelsPage() {
                     <article className="h-full bg-white/70 backdrop-blur-xl rounded-ios-2xl overflow-hidden border border-white/60 shadow-sm hover:shadow-ios-float transition-all duration-300 hover:-translate-y-1 relative">
                       {/* 封面区域 */}
                       <div className="relative aspect-[3/4] overflow-hidden bg-gray-100">
-                        {novel.cover_url || novel.cover_image ? (
+                        {novel.cover_url ? (
                           <img
-                            src={novel.cover_url || novel.cover_image}
+                            src={novel.cover_url}
                             alt={novel.title}
                             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                           />

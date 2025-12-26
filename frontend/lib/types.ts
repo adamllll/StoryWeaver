@@ -28,10 +28,9 @@ export interface Novel {
   id: number;
   title: string;
   description?: string;
-  outline?: string; // 小说大纲（AI 生成的章节概要）
+  outline?: string; // 小说大纲(AI 生成的章节概要)
   category: string;
   cover_url?: string;
-  cover_image?: string; // 兼容性字段
   status: string;
   chapter_count: number;
   word_count: number;

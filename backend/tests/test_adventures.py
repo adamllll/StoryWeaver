@@ -91,7 +91,7 @@ class TestAdventureCRUD:
 class TestExportFunctionality:
     """测试小说导出功能"""
 
-    def test_finish_adventure(self, client, auth_headers, test_adventure_with_nodes):
+    def test_finish_adventure(self, client, auth_headers, test_adventure_with_nodes, mock_ai_service):
         """测试结束冒险"""
         response = client.post(
             f"/api/adventures/{test_adventure_with_nodes.id}/finish",

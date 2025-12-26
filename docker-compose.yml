@@ -1,0 +1,88 @@
+# StoryWeaver Docker Compose 配置
+# 适配 1Panel + OpenResty 环境（不包含 Nginx）
+
+version: '3.8'
+
+services:
+  # ========== 后端服务 ==========
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: storyweaver-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"  # 暴露给 OpenResty 反向代理
+    volumes:
+      # 数据持久化
+      - ./data:/app/data
+      # 环境变量文件
+      - ./backend/.env:/app/.env:ro
+    environment:
+      - DATABASE_URL=sqlite:///./data/story.db
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - storyweaver-net
+
+  # ========== 前端服务 ==========
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: storyweaver-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"  # 暴露给 OpenResty 反向代理
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=http://backend:8000/api
+      - BACKEND_URL=http://backend:8000
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+        reservations:
+          memory: 512M
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - storyweaver-net
+
+networks:
+  storyweaver-net:
+    driver: bridge
+
+# ========== 使用说明 ==========
+#
+# 1. 启动服务：
+#    docker compose up -d
+#
+# 2. 查看日志：
+#    docker compose logs -f
+#
+# 3. 停止服务：
+#    docker compose down
+#
+# 4. 重新构建：
+#    docker compose build --no-cache
+#
+# 5. 在 1Panel/OpenResty 中配置反向代理：
+#    - 前端: proxy_pass http://127.0.0.1:3000
+#    - 后端 API: proxy_pass http://127.0.0.1:8000/api
+#
+# 注意事项：
+# - 确保 ./data 目录存在且有写权限
+# - 确保 ./backend/.env 文件已配置
+# - 2GB 内存服务器建议只运行这两个服务

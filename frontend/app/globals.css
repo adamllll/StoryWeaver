@@ -1,0 +1,436 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================
+   CSS 变量定义
+   ============================================ */
+@layer base {
+  :root {
+    /* 背景色 - iOS 系统灰 */
+    --background: 240 5% 96%;  /* #F2F2F7 */
+    --foreground: 222.2 84% 4.9%;
+
+    /* 卡片 */
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+
+    /* 弹窗 */
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    /* 主色（神秘紫） */
+    --primary: 270 91% 65%;  /* #A855F7 */
+    --primary-foreground: 0 0% 100%;
+
+    /* 次级色 */
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    /* 静音色 */
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    /* 强调色 */
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    /* 破坏性操作 */
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    /* 边框 */
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 270 91% 65%;
+
+    /* 圆角 */
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;  /* #1C1C1E */
+    --foreground: 210 40% 98%;
+
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 270 91% 65%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 270 91% 65%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-ios-bg text-foreground relative min-h-screen;
+    /* 物理噪点纹理 - 消除由于渐变带来的色带，增加纸质/磨砂质感 */
+    &::before {
+      content: "";
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 50;
+      opacity: 0.03;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+    }
+  }
+}
+
+/* ============================================
+   毛玻璃效果类
+   ============================================ */
+@layer components {
+  /* 标准毛玻璃 */
+  .glass {
+    @apply backdrop-blur-2xl bg-white/90 border border-white/80 text-gray-900;
+    box-shadow: 0 0 0 1px rgba(156, 163, 175, 0.3);
+  }
+
+  /* 深色毛玻璃（深色背景 + 白色文字） */
+  .glass-dark {
+    @apply backdrop-blur-3xl bg-gray-900/95 border border-gray-700/90 text-white;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4);
+  }
+
+  /* 紫色玻璃（带紫色光晕） */
+  .glass-purple {
+    @apply backdrop-blur-2xl bg-purple-50/60 border border-purple-200/50;
+    box-shadow: 0 0 0 1px rgba(168, 85, 247, 0.2),
+                0 12px 32px -8px rgba(168, 85, 247, 0.15);
+  }
+
+  /* 琥珀色玻璃（带琥珀色光晕） */
+  .glass-amber {
+    @apply backdrop-blur-2xl bg-amber-50/60 border border-amber-200/50;
+    box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.2),
+                0 12px 32px -8px rgba(245, 158, 11, 0.15);
+  }
+
+  /* 悬停增强效果 */
+  .glass-hover {
+    @apply transition-all duration-300 ease-ios;
+  }
+  .glass-hover:hover {
+    @apply backdrop-blur-3xl border-white/80;
+    box-shadow: 0 0 0 1px rgba(156, 163, 175, 0.5),
+                0 12px 24px -6px rgba(0, 0, 0, 0.12);
+  }
+
+  /* 暗色模式毛玻璃 */
+  .dark .glass {
+    @apply bg-gray-800/40 border-gray-700/50;
+  }
+  .dark .glass-dark {
+    @apply bg-gray-800/60 border-gray-700/60;
+  }
+}
+
+/* ============================================
+   按钮组件类
+   ============================================ */
+@layer components {
+  /* 主按钮 - 紫色渐变 */
+  .btn-primary {
+    @apply px-6 py-3 rounded-ios-lg font-semibold text-white inline-flex items-center justify-center;
+    background: linear-gradient(135deg, #6B21A8 0%, #A855F7 50%, #C084FC 100%);
+    box-shadow: 0 4px 12px -2px rgba(168, 85, 247, 0.4);
+    transition: all 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+  }
+  .btn-primary:hover {
+    @apply shadow-ios-purple;
+    transform: translateY(-1px);
+  }
+  .btn-primary:active {
+    @apply scale-95;
+  }
+
+  /* 次级按钮 - 毛玻璃 */
+  .btn-secondary {
+    @apply px-6 py-3 rounded-ios-lg font-semibold text-gray-800 inline-flex items-center justify-center;
+    @apply glass glass-hover active:scale-[0.98];
+  }
+
+  /* 幽灵按钮 */
+  .btn-ghost {
+    @apply px-6 py-3 rounded-ios-lg font-semibold text-gray-700 inline-flex items-center justify-center;
+    @apply hover:bg-gray-100/80 active:scale-[0.98] transition-all duration-200;
+  }
+
+  /* 图标按钮 */
+  .btn-icon {
+    @apply w-10 h-10 rounded-ios-md flex items-center justify-center;
+    @apply hover:bg-gray-100/80 active:scale-95 transition-all duration-200;
+  }
+}
+
+/* ============================================
+   卡片组件类
+   ============================================ */
+@layer components {
+  /* 标准卡片 */
+  .card-glass {
+    @apply rounded-ios-xl glass p-6;
+  }
+
+  /* 可悬停卡片 */
+  .card-hover {
+    @apply rounded-ios-xl glass glass-hover cursor-pointer p-6;
+  }
+  .card-hover:hover {
+    @apply shadow-ios-elevated;
+  }
+
+  /* 小说卡片 */
+  .novel-card {
+    @apply rounded-ios-xl overflow-hidden glass-hover bg-white/70 backdrop-blur-2xl border border-white/60;
+    @apply transition-all duration-300 cursor-pointer;
+    box-shadow: 0 0 0 1px rgba(156, 163, 175, 0.3);
+  }
+  .novel-card:hover {
+    @apply shadow-ios-float -translate-y-1;
+  }
+
+  /* 功能卡片（带紫色光晕） */
+  .feature-card {
+    @apply rounded-ios-2xl glass-purple p-8;
+    @apply transition-all duration-300;
+  }
+  .feature-card:hover {
+    @apply shadow-ios-purple;
+  }
+}
+
+/* ============================================
+   输入组件类
+   ============================================ */
+@layer components {
+  /* 标准输入框 */
+  .input-glass {
+    @apply px-4 py-3 rounded-ios-lg bg-white/70 border border-gray-200 w-full;
+    @apply focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-300;
+    @apply transition-all duration-200;
+  }
+
+  /* 凹陷输入框（刻痕效果） */
+  .input-inset {
+    @apply px-4 py-3 rounded-ios-lg bg-gray-100/50 shadow-ios-inner border-0 w-full;
+    @apply focus:outline-none focus:ring-2 focus:ring-purple-500/50;
+    @apply transition-all duration-200;
+  }
+
+  /* 搜索框 */
+  .input-search {
+    @apply input-glass pl-10;
+  }
+
+  /* 文本域 */
+  .textarea-glass {
+    @apply input-glass min-h-[120px] resize-none;
+  }
+}
+
+/* ============================================
+   导航栏
+   ============================================ */
+@layer components {
+  /* 标准浅色导航栏 */
+  .nav-glass {
+    @apply fixed top-0 left-0 right-0 z-50;
+    @apply backdrop-blur-3xl bg-white/70 border-b border-white/60;
+    box-shadow: 0 0 0 1px rgba(156, 163, 175, 0.2),
+                0 4px 12px -2px rgba(0, 0, 0, 0.05);
+  }
+
+  /* 紫色渐变导航栏（工作区专用） */
+  .nav-glass-purple {
+    @apply backdrop-blur-3xl border-b;
+    background: linear-gradient(135deg,
+                rgba(255, 255, 255, 0.8) 0%,
+                rgba(245, 243, 255, 0.8) 50%,
+                rgba(252, 231, 243, 0.8) 100%);
+    border-color: rgba(168, 85, 247, 0.2);
+    box-shadow: 0 0 0 1px rgba(168, 85, 247, 0.15),
+                0 4px 20px -4px rgba(168, 85, 247, 0.12);
+  }
+
+  .dark .nav-glass {
+    @apply bg-gray-900/70 border-gray-800/60;
+  }
+}
+
+/* ============================================
+   模态框
+   ============================================ */
+@layer components {
+  .modal-overlay {
+    @apply fixed inset-0 z-50 bg-black/30 backdrop-blur-sm;
+    @apply flex items-center justify-center p-6;
+  }
+
+  .modal-glass {
+    @apply rounded-ios-3xl glass-dark p-8 max-w-2xl w-full;
+    @apply shadow-ios-float animate-scale-in;
+  }
+}
+
+/* ============================================
+   AI 助手面板
+   ============================================ */
+@layer components {
+  .ai-panel {
+    @apply h-full;
+    @apply backdrop-blur-3xl bg-white/60 border-l border-white/60;
+    @apply flex flex-col shadow-ios-elevated;
+  }
+
+  .ai-message {
+    @apply px-4 py-3 rounded-ios-lg mb-3;
+  }
+  .ai-message-user {
+    @apply bg-purple-100/80 text-purple-900 ml-8;
+  }
+  .ai-message-assistant {
+    @apply glass mr-8;
+  }
+
+  /* 流式打字光标 */
+  .typing-cursor::after {
+    content: '|';
+    @apply inline-block ml-1 animate-typing-cursor text-purple-500;
+  }
+}
+
+/* ============================================
+   阅读相关
+   ============================================ */
+@layer components {
+  /* 阅读区域 */
+  .reading-area {
+    @apply max-w-3xl mx-auto px-8 py-12;
+    @apply font-serif text-lg leading-relaxed text-gray-800;
+    @apply bg-ios-reading rounded-ios-2xl shadow-ios-inner;
+  }
+
+  .reading-area p {
+    @apply mb-6;
+    text-indent: 2em;
+  }
+
+  /* 互动选择弹窗 */
+  .choice-modal {
+    @apply rounded-ios-2xl glass-purple p-6 max-w-md;
+    @apply shadow-ios-purple animate-scale-in;
+  }
+
+  .choice-option {
+    @apply px-6 py-4 rounded-ios-lg glass-hover mb-3 last:mb-0 bg-white/50;
+    @apply cursor-pointer transition-all duration-200;
+  }
+  .choice-option:hover {
+    @apply bg-purple-50/60 shadow-ios-elevated;
+  }
+  .choice-option:active {
+    @apply scale-[0.98];
+  }
+}
+
+/* ============================================
+   工作区（创作中心）布局
+   ============================================ */
+@layer components {
+  .workspace {
+    @apply grid grid-cols-[280px_1fr_400px] gap-6 h-screen p-6 pt-20;
+  }
+
+  .workspace-sidebar {
+    @apply rounded-ios-xl glass overflow-y-auto;
+  }
+
+  .workspace-editor {
+    @apply rounded-ios-2xl bg-ios-reading shadow-ios-inner p-8;
+    @apply overflow-y-auto;
+  }
+
+  .workspace-ai {
+    @apply rounded-ios-xl glass-dark overflow-hidden flex flex-col;
+  }
+}
+
+/* ============================================
+   工具类
+   ============================================ */
+@layer utilities {
+  /* 紫色渐变文字 */
+  .text-gradient-purple {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, #6B21A8 0%, #A855F7 100%);
+  }
+
+  /* 文本缩进 */
+  .indent-8 {
+    text-indent: 2em;
+  }
+
+  /* 自定义滚动条 */
+  .custom-scrollbar::-webkit-scrollbar {
+    @apply w-2 h-2;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-gray-300 rounded-full;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-400;
+  }
+
+  /* 隐藏滚动条但保留滚动功能 */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* ============================================
+   响应式断点（桌面端优先）
+   ============================================ */
+@media (max-width: 1536px) {
+  .workspace {
+    @apply grid-cols-[240px_1fr_360px];
+  }
+}
+
+@media (max-width: 1280px) {
+  .workspace {
+    @apply grid-cols-[200px_1fr_320px];
+  }
+}

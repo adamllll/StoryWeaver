@@ -1,0 +1,68 @@
+# ========== Git ==========
+.git
+.gitignore
+
+# ========== 依赖目录 ==========
+node_modules/
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# ========== 构建产物 ==========
+.next/
+out/
+build/
+dist/
+*.egg-info/
+
+# ========== 环境和配置 ==========
+.env
+.env.local
+.env.*.local
+*.env
+
+# ========== 日志和临时文件 ==========
+*.log
+*.tmp
+*.temp
+.cache/
+.npm/
+.pnpm-store/
+
+# ========== 测试和覆盖率 ==========
+coverage/
+.coverage
+htmlcov/
+.pytest_cache/
+.nyc_output/
+
+# ========== IDE ==========
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ========== 数据库 ==========
+*.db
+*.sqlite
+*.sqlite3
+data/
+
+# ========== 备份文件 ==========
+*.bak
+*.backup
+*_old.*
+
+# ========== 文档 ==========
+docs/
+*.md
+!README.md
+
+# ========== 其他 ==========
+.DS_Store
+Thumbs.db
+*.pem
+*.key

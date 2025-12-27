@@ -572,11 +572,16 @@ def get_rewrite_prompt(
     # 计算原文字数
     original_word_count = len(original_text)
 
+    # 设置绝对最小字数（避免过度简化导致输出过短）
+    # 无论什么风格，输出至少要有原文的50%或30字（取较大值）
+    absolute_min_words = max(30, int(original_word_count * 0.5))
+
     # 根据重写风格计算目标字数范围
     target_word_count_ranges = {
         "保持原意": (int(original_word_count * 0.9), int(original_word_count * 1.1)),
         "增强感染力": (int(original_word_count * 1.2), int(original_word_count * 1.5)),
-        "简化表达": (int(original_word_count * 0.7), int(original_word_count * 0.9)),
+        # 简化表达：使用绝对最小字数作为下限，避免过度简化
+        "简化表达": (max(absolute_min_words, int(original_word_count * 0.7)), int(original_word_count * 0.9)),
         "改变视角": (int(original_word_count * 0.9), int(original_word_count * 1.1)),
         "增加对话": (int(original_word_count * 1.3), int(original_word_count * 1.6)),
         "增加描写": (int(original_word_count * 1.4), int(original_word_count * 1.8)),

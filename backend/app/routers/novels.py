@@ -100,6 +100,7 @@ async def _auto_generate_first_chapter(
 
         # 2. 构造提示词生成第一章内容
         from ..utils.prompts import get_continue_prompt
+        import json
 
         # 推断风格（根据类型）
         style_map = {
@@ -112,6 +113,25 @@ async def _auto_generate_first_chapter(
         }
         style = style_map.get(novel.category, "根据类型自动推断")
 
+        # 🆕 从数据库获取角色信息（如果有的话）
+        characters_json = "暂无角色设定"
+        if novel.characters:
+            characters_list = [
+                {"name": char.name, "role": char.role_type, "description": char.description or ""}
+                for char in novel.characters[:5]  # 最多取5个角色
+            ]
+            if characters_list:
+                characters_json = json.dumps(characters_list, ensure_ascii=False, indent=2)
+
+        # 🆕 从大纲中提取世界观信息
+        world_settings = "暂无世界观设定"
+        if novel.outline:
+            # 尝试从大纲中提取世界观相关内容
+            outline_lower = novel.outline.lower()
+            if "世界观" in novel.outline or "设定" in novel.outline or "背景" in novel.outline:
+                # 提取大纲中的世界观部分（简化处理：取大纲的前500字作为背景）
+                world_settings = novel.outline[:500] if len(novel.outline) > 500 else novel.outline
+
         system_prompt, user_prompt = get_continue_prompt(
             novel_title=novel.title,
             story_summary=novel.description or "暂无简介",
@@ -119,8 +139,8 @@ async def _auto_generate_first_chapter(
             style=style,
             chapter_outline=chapter_outline,
             previous_summary="（本章是开篇第一章）",
-            characters_json="暂无角色设定",
-            world_settings="暂无世界观设定",
+            characters_json=characters_json,  # 🆕 使用实际角色信息
+            world_settings=world_settings,    # 🆕 使用大纲中的世界观
             word_count=2000,  # 第一章生成2000字
             special_requirements="这是小说的开篇第一章，需要引人入胜，设定清晰，留下悬念。",
         )

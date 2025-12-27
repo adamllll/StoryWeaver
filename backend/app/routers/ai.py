@@ -55,6 +55,11 @@ def extract_title_and_content(markdown_text: str) -> tuple[str, str]:
     """
     从Markdown文本中提取第一个标题和正文
 
+    支持多种标题格式：
+    1. Markdown 格式：# 标题 或 ## 标题
+    2. 中文章节格式：第X章 标题
+    3. 纯标题行：第一个非空行且较短（<50字）
+
     示例:
     输入: "# 第一章：开端\n\n正文内容..."
     输出: ("第一章：开端", "正文内容...")
@@ -69,17 +74,41 @@ def extract_title_and_content(markdown_text: str) -> tuple[str, str]:
     if not text:
         return "", ""
 
-    # 匹配 Markdown 标题 (# 或 ## 开头的行)
-    title_match = re.match(r'^#+\s*(.+?)(?:\n|$)', text, re.MULTILINE)
+    lines = text.split('\n')
+    title = ""
+    content_start = 0
 
-    if title_match:
-        title = title_match.group(1).strip()
-        # 移除标题后的内容作为正文
-        content = text[title_match.end():].strip()
-        return title, content
+    for i, line in enumerate(lines):
+        line_stripped = line.strip()
+        if not line_stripped:
+            continue
 
-    # 如果没有标题，返回空标题和原文
-    return "", text
+        # 1. 匹配 Markdown 标题 (# 或 ## 开头的行)
+        md_match = re.match(r'^#+\s*(.+)', line_stripped)
+        if md_match:
+            title = md_match.group(1).strip()
+            content_start = i + 1
+            break
+
+        # 2. 匹配中文章节格式：第X章、第X节、第X回 等
+        chapter_match = re.match(r'^第.+?[章节回][\s：:]*(.*)$', line_stripped)
+        if chapter_match:
+            title = line_stripped
+            content_start = i + 1
+            break
+
+        # 3. 第一个非空行且较短（可能是标题）
+        if i == 0 and len(line_stripped) < 50 and not line_stripped.endswith(('。', '！', '？', '…', '"', '"')):
+            title = line_stripped
+            content_start = i + 1
+            break
+
+        # 如果第一个非空行很长或以标点结尾，说明没有标题
+        break
+
+    # 提取正文
+    content = '\n'.join(lines[content_start:]).strip()
+    return title, content
 
 
 def extract_scene_from_chapter(chapter: Chapter) -> str:
@@ -867,8 +896,9 @@ async def rewrite_text(
         (original_word_count, original_word_count)
     )
 
-    # 设置宽松的验证阈值（允许比目标下限再低 20%）
-    validation_min = int(min_words * 0.8)
+    # 设置验证阈值：至少达到目标下限的90%，且不低于30字
+    # 这样可以避免 Gemini 模型输出过短的内容
+    validation_min = max(int(min_words * 0.9), 30)
 
     # 重试机制配置
     MAX_RETRIES = 3

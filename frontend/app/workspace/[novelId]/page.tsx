@@ -157,16 +157,21 @@ export default function NovelWorkspacePage() {
 
   const handleChapterCreate = async () => {
     if (!novel) return;
-    // 立即清空编辑器内容，避免显示上一章的内容
-    setEditorContent("");
-    setChapterTitle("");
 
+    // 创建新章节
     const newChapter = await createChapter({
       title: `第 ${novel.chapters.length + 1} 章`,
       content: "",
       order_num: novel.chapters.length + 1,
     });
-    if (newChapter) loadChapter(newChapter.id);
+
+    if (newChapter) {
+      // 直接设置状态，不调用 loadChapter（避免异步覆盖问题）
+      setCurrentChapter(newChapter);
+      setEditorContent("");  // 新章节内容为空
+      setChapterTitle(newChapter.title);
+      setActiveTab("editor");
+    }
   };
 
   const handleChapterDelete = async (chapterId: number) => {

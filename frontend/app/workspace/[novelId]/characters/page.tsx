@@ -9,7 +9,6 @@ import {
   Loader2,
   Users,
   Sparkles,
-  Edit2,
   Trash2,
   Save,
   X,
@@ -81,7 +80,7 @@ export default function CharactersPage() {
     };
 
     fetchData();
-  }, [isAuthenticated, novelId]);
+  }, [isAuthenticated, novelId, router, toast]);
 
   const handleCreate = () => {
     setIsCreating(true);

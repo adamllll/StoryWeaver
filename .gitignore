@@ -64,6 +64,7 @@ desktop.ini
 *.log
 *.tmp
 *.temp
+*.pid
 .cache/
 logs/
 
@@ -89,3 +90,4 @@ reference-project/
 .claude/
 .serena/
 .vscode/
+.spec-workflow/

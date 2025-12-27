@@ -33,19 +33,6 @@ const containerVariants: Variants = {
   },
 };
 
-const itemVariants: Variants = {
-  hidden: { y: 20, opacity: 0 },
-  visible: {
-    y: 0,
-    opacity: 1,
-    transition: {
-      type: "spring",
-      stiffness: 100,
-      damping: 20,
-    },
-  },
-};
-
 const cardVariants: Variants = {
   hidden: { y: 20, opacity: 0 },
   visible: {
@@ -77,7 +64,7 @@ export default function HomePage() {
   useEffect(() => {
     setMounted(true);
     checkAuth();
-  }, []);
+  }, [checkAuth]);
 
   const handleLogout = () => {
     logout();

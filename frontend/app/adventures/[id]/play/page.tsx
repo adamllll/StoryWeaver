@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAdventureStore } from "@/lib/adventure-store";
 import { apiClient } from "@/lib/api";
-import { StoryNode, Choice, PlayerState } from "@/lib/adventure-types";
+import { StoryNode, Choice } from "@/lib/adventure-types";
 import { PlayerStatePanel } from "@/components/adventure/PlayerStatePanel";
 import { StoryDisplay } from "@/components/adventure/StoryDisplay";
 import { ChoiceCards } from "@/components/adventure/ChoiceCards";
@@ -14,7 +14,7 @@ import { ChapterSidebar } from "@/components/adventure/ChapterSidebar";
 import { EndAdventureButton } from "@/components/adventure/EndAdventureButton";
 import { GameEndDialog } from "@/components/adventure/GameEndDialog";
 import { Button } from "@/components/ui/button";
-import { Menu, X, Share2, BookText, Settings } from "lucide-react";
+import { Menu, X, BookText } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 
 // ------------------------------------------------------------------
@@ -70,21 +70,30 @@ export default function AdventurePlayPage() {
   useEffect(() => {
     if (storeCurrentNode) {
       setViewingNode(storeCurrentNode);
-      // Refresh node list if it's a new node
-      if (nodes.length > 0 && storeCurrentNode.id !== nodes[nodes.length - 1].id) {
-         apiClient.get<StoryNode[]>(`/adventures/${adventureId}/nodes`).then(setNodes);
-      }
+
+      // ✅ 简化：currentNode变化就刷新，删除复杂条件
+      apiClient.get<StoryNode[]>(`/adventures/${adventureId}/nodes`)
+        .then(fetchedNodes => {
+          // 强制按chapter_num排序
+          const sorted = [...fetchedNodes].sort((a, b) => a.chapter_num - b.chapter_num);
+          setNodes(sorted);
+        })
+        .catch(err => {
+          console.error('Failed to refresh nodes:', err);
+          // 静默失败，不影响主流程
+        });
     }
-  }, [storeCurrentNode, adventureId]); // Added adventureId to dependencies to avoid stale closures, though mostly handled by fetch
+  }, [storeCurrentNode, adventureId]);
 
   // Handlers
   const handleChoice = async (choice: Choice) => {
     try {
       await makeChoice(choice);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "请稍后重试";
       toast({
         title: "选择失败",
-        description: err.message || "请稍后重试",
+        description: message,
         variant: "destructive"
       });
     }
@@ -194,16 +203,14 @@ export default function AdventurePlayPage() {
         <div className="max-w-4xl mx-auto px-4 py-8 lg:py-12 pb-32">
           
           {/* Header Info */}
-          <motion.div 
+          <motion.div
             initial={{ y: -20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             className="text-center mb-10"
           >
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gray-200/50 text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">
-              第 {viewingNode.chapter_num} 章
-            </div>
+            {/* 只显示一个标题，避免重复 */}
             <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900 tracking-tight">
-              {viewingNode.title || `冒险篇章 ${viewingNode.chapter_num}`}
+              {viewingNode.title || `第 ${viewingNode.chapter_num} 章`}
             </h1>
           </motion.div>
 

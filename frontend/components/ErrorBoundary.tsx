@@ -34,7 +34,7 @@ export class ErrorBoundary extends Component<
     };
   }
 
-  static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
+  static getDerivedStateFromError(_error: Error): Partial<ErrorBoundaryState> {
     // 更新 state，下次渲染将显示备用 UI
     return { hasError: true };
   }

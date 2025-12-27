@@ -10,11 +10,10 @@
 
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
-import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
   Globe,
@@ -22,17 +21,15 @@ import {
   Edit3,
   GitBranch as GitBranchIcon,
   BarChart3,
-  Sparkles,
-  ChevronLeft,
-  ChevronRight,
   Save,
   PanelLeftClose,
   PanelLeftOpen,
   PanelRightClose,
   PanelRightOpen,
+  Sparkles,
 } from "lucide-react";
-import { novelsApi, chaptersApi } from "@/lib/api";
-import type { NovelDetail, Chapter } from "@/lib/api";
+import { novelsApi, chaptersApi, ApiError } from "@/lib/api";
+import type { NovelDetail, Chapter, ChapterSummary } from "@/lib/api";
 import { useAuthStore } from "@/lib/store";
 import { useToast } from "@/components/ui/use-toast";
 import { useChapters } from "@/hooks/useChapters";
@@ -113,6 +110,27 @@ export default function NovelWorkspacePage() {
     },
   });
 
+  const tabs = [
+    { id: "editor", icon: Edit3, label: "编辑" },
+    { id: "mindmap", icon: GitBranchIcon, label: "脑图" },
+    { id: "stats", icon: BarChart3, label: "统计" },
+    { id: "world", icon: Globe, label: "世界观" },
+  ] as const;
+
+  // === 业务逻辑方法 ===
+  const loadChapter = useCallback(async (chapterId: number) => {
+    try {
+      const chapter = await chaptersApi.get(novelId, chapterId);
+      setCurrentChapter(chapter);
+      setEditorContent(chapter.content);
+      setChapterTitle(chapter.title);
+      setActiveTab("editor");
+    } catch (error: unknown) {
+      const message = error instanceof ApiError ? error.detail : "无法加载章节";
+      toast({ title: "无法加载章节", description: message, variant: "destructive" });
+    }
+  }, [novelId, toast]);
+
   // === 初始化加载 ===
   useEffect(() => {
     if (!isAuthenticated) {
@@ -127,42 +145,52 @@ export default function NovelWorkspacePage() {
         if (data.chapters && data.chapters.length > 0) {
           loadChapter(data.chapters[0].id);
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const message = error instanceof ApiError ? error.detail : "无法加载小说";
         toast({
           title: "加载失败",
-          description: error.detail || "无法加载小说",
+          description: message,
           variant: "destructive",
         });
-        if (error.status === 404) router.push("/workspace");
+        if (error instanceof ApiError && error.status === 404) router.push("/workspace");
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchNovel();
-  }, [isAuthenticated, novelId, router, toast]);
-
-  // === 业务逻辑方法 ===
-  const loadChapter = async (chapterId: number) => {
-    try {
-      const chapter = await chaptersApi.get(novelId, chapterId);
-      setCurrentChapter(chapter);
-      setEditorContent(chapter.content);
-      setChapterTitle(chapter.title);
-      setActiveTab("editor");
-    } catch (error: any) {
-      toast({ title: "无法加载章节", description: error.detail, variant: "destructive" });
-    }
-  };
+  }, [isAuthenticated, novelId, router, toast, loadChapter]);
 
   const handleChapterCreate = async () => {
     if (!novel) return;
 
+    const getNextOrderNum = (chapters: ChapterSummary[]) => {
+      const used = new Set<number>();
+      chapters
+        .filter((chapter) => !chapter.is_branch)
+        .forEach((chapter) => {
+          const order = Number.isFinite(chapter.order_num)
+            ? Math.round(chapter.order_num)
+            : 0;
+          if (order > 0) {
+            used.add(order);
+          }
+        });
+
+      let next = 1;
+      while (used.has(next)) {
+        next += 1;
+      }
+      return next;
+    };
+
+    const nextOrderNum = getNextOrderNum(novel.chapters);
+
     // 创建新章节
     const newChapter = await createChapter({
-      title: `第 ${novel.chapters.length + 1} 章`,
+      title: `第 ${nextOrderNum} 章`,
       content: "",
-      order_num: novel.chapters.length + 1,
+      order_num: nextOrderNum,
     });
 
     if (newChapter) {
@@ -189,8 +217,14 @@ export default function NovelWorkspacePage() {
   };
 
   const handleContentInsert = (content: string, replace: boolean = false, title?: string) => {
-    // 如果提供了标题且当前标题栏为空，更新标题栏
-    if (title && title.trim() && !chapterTitle) {
+    const isAutoTitle = (value: string) => /^第\s*\d+\s*章$/.test(value.trim());
+    const shouldUpdateTitle = Boolean(
+      title &&
+      title.trim() &&
+      (replace && (isAutoTitle(chapterTitle) || editorContent.trim().length === 0 || !chapterTitle))
+    );
+
+    if (shouldUpdateTitle && title) {
       setChapterTitle(title.trim());
     }
     setEditorContent((prev) => (replace ? content : prev + "\n\n" + content));
@@ -249,15 +283,10 @@ export default function NovelWorkspacePage() {
 
         {/* 视图切换 Tabs */}
         <div className="flex bg-gray-100/50 p-1 rounded-xl border border-gray-200/50 backdrop-blur-sm">
-          {[
-            { id: "editor", icon: Edit3, label: "编辑" },
-            { id: "mindmap", icon: GitBranchIcon, label: "脑图" },
-            { id: "stats", icon: BarChart3, label: "统计" },
-            { id: "world", icon: Globe, label: "世界观" },
-          ].map((tab) => (
+          {tabs.map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
+              onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${activeTab === tab.id ? "bg-white text-purple-700 shadow-sm ring-1 ring-black/5" : "text-gray-500 hover:text-gray-700 hover:bg-black/5"}`}
             >
               <tab.icon className="w-4 h-4" />
@@ -440,6 +469,7 @@ export default function NovelWorkspacePage() {
               currentChapter={currentChapter}
               editorContent={editorContent}
               onContentInsert={handleContentInsert}
+              novelOutline={novel?.outline}  // 关键修复：传递小说大纲用于整章生成
             />
           </div>
         </aside>

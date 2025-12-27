@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     OPENAI_MODEL_OUTLINE: str = ""    # 大纲生成
     OPENAI_MODEL_CONTINUE: str = ""   # 章节续写
     OPENAI_MODEL_EXPAND: str = ""     # 文本扩写
+    OPENAI_MODEL_REWRITE: str = ""    # 文本重写
     OPENAI_MODEL_CHARACTER: str = ""  # 角色生成
     OPENAI_MODEL_BRANCH: str = ""     # 分支生成
     OPENAI_MODEL_FORMAT_OPTIMIZE: str = ""  # 格式优化
@@ -48,6 +49,7 @@ class Settings(BaseSettings):
             "outline": self.OPENAI_MODEL_OUTLINE,
             "continue": self.OPENAI_MODEL_CONTINUE,
             "expand": self.OPENAI_MODEL_EXPAND,
+            "rewrite": self.OPENAI_MODEL_REWRITE,
             "character": self.OPENAI_MODEL_CHARACTER,
             "branch": self.OPENAI_MODEL_BRANCH,
             "format_optimize": self.OPENAI_MODEL_FORMAT_OPTIMIZE,

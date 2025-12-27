@@ -13,10 +13,8 @@ import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import {
-  BookOpen,
   ChevronLeft,
   ChevronRight,
-  Home,
   List,
   Settings,
   Moon,
@@ -24,10 +22,7 @@ import {
   Type,
   Loader2,
   Sparkles,
-  ArrowLeft,
-  X,
-  Check,
-  Bookmark
+  ArrowLeft
 } from "lucide-react";
 import { chaptersApi, readingProgressApi, Chapter, ApiError } from "@/lib/api";
 import { useToast } from "@/components/ui/use-toast";

@@ -55,6 +55,11 @@ class ContinueRequest(BaseModel):
         description="续写风格（可选）。如果不指定，将根据小说类型自动推断"
     )
     special_requirements: Optional[str] = Field(None, max_length=500)
+    cursor_position: Optional[int] = Field(
+        None,
+        ge=0,
+        description="光标在章节内容中的位置（字符偏移量）。如果提供，将从此位置开始续写；否则从章节末尾续写"
+    )
 
 
 class ContinueResponse(BaseModel):
@@ -75,6 +80,10 @@ class ExpandRequest(BaseModel):
     text: str = Field(..., min_length=5, max_length=1000)
     style: Literal["详细描写", "动作描写", "心理描写", "环境描写"] = "详细描写"
     word_count: int = Field(default=500, ge=100, le=2000)
+    chapter_title: Optional[str] = Field(None, max_length=200, description="章节标题")
+    context_before: Optional[str] = Field(None, max_length=4000, description="选中文本上文")
+    context_after: Optional[str] = Field(None, max_length=4000, description="选中文本下文")
+    position_hint: Optional[str] = Field(None, max_length=120, description="选中文本在全文中的位置提示")
 
 
 class ExpandResponse(BaseModel):
@@ -83,6 +92,7 @@ class ExpandResponse(BaseModel):
     expanded_text: str
     word_count: int
     usage: AIUsage
+    warning: Optional[str] = Field(default=None, description="扩写未达目标时的提示信息")
 
 
 # ========== 角色生成 ==========
@@ -197,6 +207,7 @@ class RewriteResponse(BaseModel):
     original_word_count: int = Field(..., description="原文字数")
     rewritten_word_count: int = Field(..., description="重写后字数")
     usage: AIUsage
+    warning: Optional[str] = Field(default=None, description="重写未达目标时的提示信息")
 
 
 # ========== 冒险游戏：开局生成 ==========

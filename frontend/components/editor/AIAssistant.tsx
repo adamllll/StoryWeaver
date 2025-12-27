@@ -30,6 +30,7 @@ export function AIAssistant({
   currentChapter,
   editorContent,
   onContentInsert,
+  novelOutline,
 }: AIAssistantProps) {
   const { toast } = useToast();
 
@@ -60,6 +61,7 @@ export function AIAssistant({
     currentChapter,
     editorContent,
     onContentInsert,
+    novelOutline,  // 关键修复：传递小说大纲
   });
 
   return (

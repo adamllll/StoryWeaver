@@ -129,6 +129,7 @@ export default function NovelDetailPage() {
               {/* 封面图 */}
               <div className="relative aspect-[3/4] rounded-ios-xl overflow-hidden shadow-lg mb-6 group">
                 {novel.cover_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={novel.cover_url}
                     alt={novel.title}
@@ -246,6 +247,7 @@ export default function NovelDetailPage() {
                       <div key={char.id} className="glass rounded-ios-xl p-3 flex items-center gap-3 border-white/60 hover:border-purple-200 transition-colors">
                          <div className="w-10 h-10 rounded-full bg-gray-100 overflow-hidden flex-shrink-0">
                            {char.avatar ? (
+                             // eslint-disable-next-line @next/next/no-img-element
                              <img src={char.avatar} alt={char.name} className="w-full h-full object-cover" />
                            ) : (
                              <div className="w-full h-full flex items-center justify-center bg-gray-200">

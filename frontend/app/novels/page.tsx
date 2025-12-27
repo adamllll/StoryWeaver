@@ -254,6 +254,7 @@ export default function NovelsPage() {
                       {/* 封面区域 */}
                       <div className="relative aspect-[3/4] overflow-hidden bg-gray-100">
                         {novel.cover_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
                           <img
                             src={novel.cover_url}
                             alt={novel.title}

@@ -11,7 +11,7 @@ import {
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
 import { ChapterSummary } from "@/lib/types";
-import { FileText, Calendar, TrendingUp } from "lucide-react";
+import { FileText, TrendingUp } from "lucide-react";
 
 interface ChapterPreviewProps {
   chapter: ChapterSummary;

@@ -17,6 +17,7 @@ import {
   useEdgesState,
   MarkerType,
   NodeTypes,
+  ReactFlowInstance,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { ChapterSummary } from "@/lib/types";
@@ -28,8 +29,14 @@ interface MindMapTreeProps {
   onChapterClick: (chapterId: number) => void;
 }
 
+interface ChapterNodeData {
+  chapter: ChapterSummary;
+  isActive: boolean;
+  onClick: (chapterId: number) => void;
+}
+
 // 自定义章节节点组件
-function ChapterNode({ data }: { data: any }) {
+function ChapterNode({ data }: { data: ChapterNodeData }) {
   const { chapter, isActive, onClick } = data;
   const isBranch = chapter.is_branch;
 
@@ -119,8 +126,7 @@ export function MindMapTree({
       chapterList: ChapterSummary[],
       level: number,
       parentX: number,
-      parentY: number,
-      siblingIndex: number = 0
+      parentY: number
     ) => {
       chapterList.forEach((chapter, index) => {
         const childChapters = chapters.filter(
@@ -166,7 +172,7 @@ export function MindMapTree({
 
         // 递归处理子节点
         if (hasChildren) {
-          buildNodes(childChapters, level + 1, x, y, index);
+          buildNodes(childChapters, level + 1, x, y);
         }
       });
     };
@@ -188,7 +194,7 @@ export function MindMapTree({
 
   // 自动居中到当前章节
   const onInit = useCallback(
-    (reactFlowInstance: any) => {
+    (reactFlowInstance: ReactFlowInstance) => {
       if (currentChapterId) {
         const node = nodes.find((n) => n.id === String(currentChapterId));
         if (node) {
@@ -240,7 +246,7 @@ export function MindMapTree({
           className="bg-white/80 backdrop-blur-sm rounded-xl border border-gray-200 shadow-lg"
         />
         <MiniMap
-          nodeColor={(node: any) => {
+          nodeColor={(node: Node<ChapterNodeData>) => {
             if (node.data.isActive) return "#a855f7";
             if (node.data.chapter.is_branch) return "#f59e0b";
             return "#e5e7eb";

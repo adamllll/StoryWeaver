@@ -11,7 +11,7 @@ from ..schemas import AIUsage
 logger = logging.getLogger(__name__)
 
 # 任务类型定义
-TaskType = Literal["outline", "continue", "expand", "character", "branch"]
+TaskType = Literal["outline", "continue", "expand", "rewrite", "character", "branch"]
 
 # 导入 tenacity 用于重试
 from tenacity import (
@@ -62,6 +62,22 @@ class AIService:
         else:
             logger.warning("OPENAI_API_KEY 未配置，AI 服务不可用")
 
+    @staticmethod
+    def _build_extra_body(model: str, max_tokens: int) -> dict | None:
+        """
+        构建兼容层额外参数（适配非 OpenAI 原生模型）
+
+        部分 OpenAI 兼容网关会忽略 max_tokens，但支持 max_output_tokens。
+        """
+        if not model:
+            return None
+
+        model_name = model.lower()
+        if "gemini" in model_name:
+            return {"max_output_tokens": max_tokens}
+
+        return None
+
     @create_retry_decorator(max_attempts=3)
     async def _call_api(
         self,
@@ -78,11 +94,14 @@ class AIService:
         - 指数退避等待（1s -> 2s -> 4s）
         - 仅对 API 错误、连接错误、速率限制进行重试
         """
+        extra_body = self._build_extra_body(model, max_tokens)
+
         response = await self.openai_client.chat.completions.create(
             model=model,
             messages=messages,
             max_tokens=max_tokens,
             temperature=temperature,
+            extra_body=extra_body,
         )
 
         content = response.choices[0].message.content
@@ -154,6 +173,7 @@ class AIService:
         max_tokens: int = 4000,
         temperature: float = 0.7,
         task: Optional[TaskType] = None,
+        fallback_to_text: bool = False,
     ) -> tuple[dict, AIUsage]:
         """
         生成内容并解析为 JSON
@@ -164,12 +184,14 @@ class AIService:
             max_tokens: 最大生成令牌数
             temperature: 创意度（0-1）
             task: 任务类型，用于选择对应模型
+            fallback_to_text: 如果为 True，在 JSON 解析失败时返回包含原始文本的字典而不是抛出异常
 
         返回:
             元组（解析后的 JSON, 使用量信息）
+            如果 fallback_to_text=True 且 JSON 解析失败，返回 {"_raw_text": 原始内容, "_parse_error": 错误信息}
 
         异常:
-            Exception: AI 服务失败或 JSON 解析失败时抛出
+            Exception: AI 服务失败或 JSON 解析失败时抛出（仅当 fallback_to_text=False）
         """
         content, usage = await self.generate(
             system_prompt, user_prompt, max_tokens, temperature, task
@@ -202,6 +224,12 @@ class AIService:
                     "task": task,
                 }
             )
+
+            # 如果启用了降级模式，返回包含原始文本的字典
+            if fallback_to_text:
+                logger.warning(f"JSON 解析失败，降级返回原始文本: task={task}")
+                return {"_raw_text": original_content, "_parse_error": str(e)}, usage
+
             raise Exception(f"AI 响应 JSON 解析失败: {str(e)}\n原始响应预览: {content[:200]}...")
 
     async def generate_text(

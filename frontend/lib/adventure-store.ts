@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 import { apiClient } from './api';
-import { Adventure, StoryNode, Choice, PlayerState, ChoiceResponse } from './adventure-types';
+import { Adventure, StoryNode, Choice, ChoiceResponse } from './adventure-types';
 import { toast } from '@/components/ui/use-toast';
 
 // Extend RollResult if not defined in types (it wasn't in my previous write, but ChoiceResponse seems to cover it)
@@ -124,11 +124,7 @@ export const useAdventureStore = create<AdventureState>()(
 
           try {
             // 调用后端结束 API
-            const response = await apiClient.post<{
-              message: string;
-              ending_type: string;
-              novel: any;
-            }>(`/adventures/${adventureId}/finish`, {
+            await apiClient.post(`/adventures/${adventureId}/finish`, {
               ending_type: endingType,
             });
 
@@ -147,11 +143,12 @@ export const useAdventureStore = create<AdventureState>()(
               title: "冒险已结束",
               description: "您的冒险故事已保存",
             });
-          } catch (error: any) {
+          } catch (error: unknown) {
             set({ isLoading: false });
+            const message = error instanceof Error ? error.message : "请稍后重试";
             toast({
               title: "结束失败",
-              description: error.message || "请稍后重试",
+              description: message,
               variant: "destructive",
             });
             throw error;

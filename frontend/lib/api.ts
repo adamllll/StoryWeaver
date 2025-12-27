@@ -119,7 +119,10 @@ async function request<T>(
  * API 客户端对象 - 提供便捷的请求方法
  */
 export const apiClient = {
-  get: <T>(endpoint: string, params?: Record<string, any>) => {
+  get: <T>(
+    endpoint: string,
+    params?: Record<string, string | number | boolean | null | undefined>
+  ) => {
     let url = endpoint;
     if (params) {
       const searchParams = new URLSearchParams();
@@ -373,6 +376,7 @@ export const aiApi = {
     word_count?: number;
     style?: string;
     special_requirements?: string;
+    cursor_position?: number;  // 光标位置（字符偏移量），用于从指定位置续写
   }) => apiClient.post<{
     content: string;
     title: string;
@@ -391,16 +395,22 @@ export const aiApi = {
     original_word_count: number;
     rewritten_word_count: number;
     usage: AIUsage;
+    warning?: string;
   }>("/ai/rewrite", data),
 
   expandText: (data: {
     text: string;
     style?: "详细描写" | "动作描写" | "心理描写" | "环境描写";
     word_count?: number;
+    chapter_title?: string;
+    context_before?: string;
+    context_after?: string;
+    position_hint?: string;
   }) => apiClient.post<{
     expanded_text: string;
     word_count: number;
     usage: AIUsage;
+    warning?: string;
   }>("/ai/expand", data),
 
   generateCharacter: (data: {
@@ -512,7 +522,7 @@ export const adventureApi = {
     apiClient.post<{
       message: string;
       ending_type: string;
-      novel: any;
+      novel: unknown;
     }>(`/adventures/${id}/finish`, data),
 };
 

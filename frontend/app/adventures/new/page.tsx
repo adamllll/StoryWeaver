@@ -3,19 +3,18 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  ArrowLeft, 
-  Sparkles, 
-  Wand2, 
-  User, 
-  Dices, 
-  CheckCircle2, 
-  BookOpen, 
-  Sword, 
-  Heart, 
-  Building2, 
-  Ghost, 
-  Rocket 
+import {
+  ArrowLeft,
+  Sparkles,
+  Wand2,
+  Dices,
+  CheckCircle2,
+  BookOpen,
+  Sword,
+  Heart,
+  Building2,
+  Ghost,
+  Rocket
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,6 +40,15 @@ export default function CreateAdventurePage() {
   const { toast } = useToast();
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const genderOptions: Array<{
+    value: CreateAdventureRequest["protagonist_gender"];
+    label: string;
+  }> = [
+    { value: "male", label: "男" },
+    { value: "female", label: "女" },
+    { value: "other", label: "其他" },
+  ];
 
   // Form State
   const [formData, setFormData] = useState<CreateAdventureRequest>({
@@ -274,11 +282,7 @@ export default function CreateAdventurePage() {
                       <div className="space-y-2">
                         <Label>性别</Label>
                         <div className="flex gap-2">
-                          {[
-                            { value: 'male', label: '男' },
-                            { value: 'female', label: '女' },
-                            { value: 'other', label: '其他' }
-                          ].map(opt => (
+                          {genderOptions.map(opt => (
                             <Button
                               key={opt.value}
                               variant={formData.protagonist_gender === opt.value ? "default" : "outline"}
@@ -286,7 +290,7 @@ export default function CreateAdventurePage() {
                                 "flex-1", 
                                 formData.protagonist_gender === opt.value && "bg-purple-600 hover:bg-purple-700"
                               )}
-                              onClick={() => setFormData(prev => ({ ...prev, protagonist_gender: opt.value as any }))}
+                              onClick={() => setFormData(prev => ({ ...prev, protagonist_gender: opt.value }))}
                             >
                               {opt.label}
                             </Button>

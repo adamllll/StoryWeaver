@@ -11,7 +11,7 @@ import { ChapterListProps } from "@/lib/types";
 export function ChapterList({
   chapters,
   currentChapterId,
-  novelId,
+  novelId: _novelId,
   onChapterClick,
   onChapterCreate,
   onChapterDelete,

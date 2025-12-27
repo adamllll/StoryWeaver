@@ -17,6 +17,8 @@ interface UseAIAssistantProps {
   currentChapter: Chapter | null;
   editorContent: string;
   onContentInsert: (content: string, replace?: boolean, title?: string) => void;
+  getCursorPosition?: () => number | null;  // 获取当前光标位置的回调（可选）
+  novelOutline?: string;  // 小说大纲（用于整章生成时参考）
 }
 
 export function useAIAssistant({
@@ -24,6 +26,8 @@ export function useAIAssistant({
   currentChapter,
   editorContent,
   onContentInsert,
+  getCursorPosition,
+  novelOutline,
 }: UseAIAssistantProps) {
   const { toast } = useToast();
   const [aiMessages, setAiMessages] = useState<AIMessage[]>([]);
@@ -125,12 +129,16 @@ export function useAIAssistant({
       const plainText = editorContent.replace(/<[^>]*>/g, '').trim();
       const chapterOutline = plainText.substring(0, 500) || currentChapter.title;
 
+      // 获取光标位置（如果提供了回调）
+      const cursorPosition = getCursorPosition?.() ?? undefined;
+
       const result = await aiApi.continueChapter({
         novel_id: novelId,
         chapter_id: currentChapter.id,
         chapter_outline: chapterOutline,
         word_count: 800,  // 默认800字续写
         style: useStyle === "自动推断" ? undefined : useStyle,
+        cursor_position: cursorPosition,  // 传递光标位置
       });
 
       addAiMessage(`**续写内容（${useStyle}）：**\n\n${result.content}\n\n---\n字数：${result.word_count}`);
@@ -141,7 +149,7 @@ export function useAIAssistant({
     } finally {
       setIsAILoading(false);
     }
-  }, [currentChapter, editorContent, novelId, continueStyle, addUserMessage, addAiMessage, onContentInsert, handleError, toast]);
+  }, [currentChapter, editorContent, novelId, continueStyle, getCursorPosition, addUserMessage, addAiMessage, onContentInsert, handleError, toast]);
 
   // 2. 生成整章
   const handleAIGenerateChapter = useCallback(async () => {
@@ -180,11 +188,15 @@ export function useAIAssistant({
     addUserMessage("请生成整章内容");
 
     try {
-      const plainText = editorContent?.replace(/<[^>]*>/g, '').trim() || '';
+      // 优先使用小说大纲，其次使用章节标题，最后使用当前内容
+      const chapterOutlineText = novelOutline
+        ? `根据小说大纲创作：\n${novelOutline.substring(0, 1000)}`
+        : currentChapter.title || "请自由发挥创作";
+
       const result = await aiApi.continueChapter({
         novel_id: novelId,
         chapter_id: currentChapter.id,
-        chapter_outline: plainText || currentChapter.title,
+        chapter_outline: chapterOutlineText,  // 关键修复：使用小说大纲
         word_count: 2000,  // 生成整章默认2000字
       });
 
@@ -196,24 +208,163 @@ export function useAIAssistant({
     } finally {
       setIsAILoading(false);
     }
-  }, [currentChapter, editorContent, novelId, addUserMessage, addAiMessage, onContentInsert, handleError, toast]);
+  }, [currentChapter, editorContent, novelId, novelOutline, addUserMessage, addAiMessage, onContentInsert, handleError, toast]);
 
   // 3. 扩写
   const handleAIExpand = useCallback(async () => {
     if (!selectedText || selectedText.length < 5) return;
 
     setIsAILoading(true);
-    addUserMessage(`请扩写：${selectedText.substring(0, 30)}...`);
+    // 计算目标字数：默认500字，或原文的5倍（取较大值）
+    const targetWordCount = Math.max(500, selectedText.length * 5);
+    addUserMessage(`请扩写：${selectedText.substring(0, 30)}...（目标${targetWordCount}字）`);
 
     try {
-      const result = await aiApi.expandText({ text: selectedText, style: "详细描写" });
-      addAiMessage(`**扩写结果：**\n\n${result.expanded_text}\n\n（请手动复制到编辑器中替换原文）`);
+      const toPlainTextWithBreaks = (html: string): string => {
+        if (!html) return "";
+        return html
+          .replace(/<br\s*\/?>/gi, "\n")
+          .replace(/<\/?p[^>]*>/gi, "\n\n")
+          .replace(/<\/?div[^>]*>/gi, "\n\n")
+          .replace(/<\/?h[1-6][^>]*>/gi, "\n\n")
+          .replace(/<\/?li[^>]*>/gi, "\n")
+          .replace(/<[^>]*>/g, "")
+          .replace(/&nbsp;/g, " ")
+          .replace(/&lt;/g, "<")
+          .replace(/&gt;/g, ">")
+          .replace(/&amp;/g, "&")
+          .replace(/\n{3,}/g, "\n\n")
+          .trim();
+      };
+
+      const plainText = toPlainTextWithBreaks(editorContent || "");
+      const paragraphs = plainText.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
+      const contextRadius = 2000;
+      const maxContextLength = 3000;
+
+      const normalizeWhitespace = (value: string) => value.replace(/\s+/g, " ").trim();
+      const buildNormalizedMap = (value: string) => {
+        let normalized = "";
+        const map: number[] = [];
+        let lastWasSpace = false;
+
+        for (let i = 0; i < value.length; i += 1) {
+          const char = value[i];
+          if (/\s/.test(char)) {
+            if (!lastWasSpace) {
+              normalized += " ";
+              map.push(i);
+              lastWasSpace = true;
+            }
+          } else {
+            normalized += char;
+            map.push(i);
+            lastWasSpace = false;
+          }
+        }
+
+        return { normalized, map };
+      };
+
+      let matchIndex = plainText.indexOf(selectedText);
+      let matchEndIndex = matchIndex >= 0 ? matchIndex + selectedText.length : -1;
+
+      if (matchIndex < 0) {
+        const normalizedText = buildNormalizedMap(plainText);
+        const normalizedSelection = normalizeWhitespace(selectedText);
+        const normalizedIndex = normalizedSelection
+          ? normalizedText.normalized.indexOf(normalizedSelection)
+          : -1;
+
+        if (normalizedIndex >= 0) {
+          const mappedStart = normalizedText.map[normalizedIndex];
+          if (typeof mappedStart === "number") {
+            matchIndex = mappedStart;
+          }
+
+          const normalizedEndIndex = normalizedIndex + normalizedSelection.length - 1;
+          const mappedEnd = normalizedText.map[normalizedEndIndex];
+          if (typeof mappedEnd === "number") {
+            matchEndIndex = mappedEnd + 1;
+          }
+        }
+      }
+
+      let paragraphIndex = -1;
+      if (matchIndex >= 0) {
+        let cursor = 0;
+        for (let i = 0; i < paragraphs.length; i += 1) {
+          const length = paragraphs[i].length;
+          const end = cursor + length;
+          if (matchIndex >= cursor && matchIndex <= end) {
+            paragraphIndex = i;
+            break;
+          }
+          cursor = end + 2;
+        }
+      }
+
+      const paragraphBefore = paragraphIndex > 0
+        ? paragraphs.slice(Math.max(0, paragraphIndex - 2), paragraphIndex).join("\n\n")
+        : "";
+      const paragraphAfter = paragraphIndex >= 0
+        ? paragraphs.slice(paragraphIndex + 1, paragraphIndex + 3).join("\n\n")
+        : "";
+
+      const hasMatch = matchIndex >= 0;
+      const contextBeforeRaw = hasMatch
+        ? plainText.slice(Math.max(0, matchIndex - contextRadius), matchIndex)
+        : plainText.slice(0, contextRadius);
+      const afterStart = hasMatch && matchEndIndex > 0 ? matchEndIndex : 0;
+      const contextAfterRaw = hasMatch
+        ? plainText.slice(afterStart, afterStart + contextRadius)
+        : plainText.slice(Math.max(0, plainText.length - contextRadius));
+
+      const contextBefore = [paragraphBefore, contextBeforeRaw]
+        .filter(Boolean)
+        .join("\n\n---\n\n")
+        .slice(-maxContextLength);
+      const contextAfter = [contextAfterRaw, paragraphAfter]
+        .filter(Boolean)
+        .join("\n\n---\n\n")
+        .slice(0, maxContextLength);
+
+      const positionPercent = matchIndex >= 0 && plainText.length > 0
+        ? Math.round((matchIndex / plainText.length) * 100)
+        : null;
+      const positionHint = positionPercent === null
+        ? "未知（未定位到选中文本，已提供章节首尾上下文）"
+        : paragraphIndex >= 0
+          ? `第 ${paragraphIndex + 1} 段 / 共 ${paragraphs.length} 段（约 ${positionPercent}%）`
+          : positionPercent < 25
+            ? `开头（约 ${positionPercent}%）`
+            : positionPercent < 75
+              ? `中段（约 ${positionPercent}%）`
+              : `结尾（约 ${positionPercent}%）`;
+
+      const result = await aiApi.expandText({
+        text: selectedText,
+        style: "详细描写",
+        word_count: targetWordCount,  // 关键修复：传递目标字数
+        chapter_title: currentChapter?.title,
+        context_before: contextBefore,
+        context_after: contextAfter,
+        position_hint: positionHint,
+      });
+      const warningNote = result.warning ? `\n\n⚠️ ${result.warning}` : "";
+      addAiMessage(`**扩写结果：**\n\n${result.expanded_text}\n\n---\n原文 ${selectedText.length} 字 → 扩写后 ${result.word_count} 字\n\n（请手动复制到编辑器中替换原文）${warningNote}`);
+      if (result.warning) {
+        toast({
+          title: "扩写字数未达标",
+          description: result.warning,
+        });
+      }
     } catch (error) {
       handleError(error, "扩写失败");
     } finally {
       setIsAILoading(false);
     }
-  }, [selectedText, addUserMessage, addAiMessage, handleError]);
+  }, [selectedText, editorContent, currentChapter?.title, addUserMessage, addAiMessage, handleError, toast]);
 
   // 4. 重写
   const handleAIRewrite = useCallback(async (style?: string) => {
@@ -231,13 +382,20 @@ export function useAIAssistant({
         original_text: selectedText,
         rewrite_style: useStyle,
       });
-      addAiMessage(`**重写结果（${useStyle}）：**\n\n${result.rewritten_text}\n\n---\n原文 ${result.original_word_count} 字 → 重写后 ${result.rewritten_word_count} 字`);
+      const warningNote = result.warning ? `\n\n⚠️ ${result.warning}` : "";
+      addAiMessage(`**重写结果（${useStyle}）：**\n\n${result.rewritten_text}\n\n---\n原文 ${result.original_word_count} 字 → 重写后 ${result.rewritten_word_count} 字${warningNote}`);
+      if (result.warning) {
+        toast({
+          title: "重写字数未达标",
+          description: result.warning,
+        });
+      }
     } catch (error) {
       handleError(error, "重写失败");
     } finally {
       setIsAILoading(false);
     }
-  }, [selectedText, novelId, currentChapter, rewriteStyle, addUserMessage, addAiMessage, handleError]);
+  }, [selectedText, novelId, currentChapter, rewriteStyle, addUserMessage, addAiMessage, handleError, toast]);
 
   // 5. 格式优化
   const handleOptimizeFormat = useCallback(async () => {

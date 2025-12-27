@@ -97,11 +97,29 @@ async def create_chapter(
     """
     novel = get_owned_novel(novel_id, current_user, db)
 
+    def get_next_main_order(chapters: list[Chapter]) -> int:
+        used = set()
+        for ch in chapters:
+            if ch.parent_chapter_id is not None:
+                continue
+            if isinstance(ch.order_num, (int, float)) and float(ch.order_num).is_integer():
+                order = int(ch.order_num)
+                if order > 0:
+                    used.add(order)
+
+        next_order = 1
+        while next_order in used:
+            next_order += 1
+        return next_order
+
     # 如果未提供顺序号，自动计算
     order_num = chapter_data.order_num
     if order_num is None:
-        max_order = max((ch.order_num for ch in novel.chapters), default=0)
-        order_num = max_order + 1
+        if chapter_data.parent_chapter_id:
+            max_order = max((ch.order_num for ch in novel.chapters), default=0)
+            order_num = max_order + 1
+        else:
+            order_num = get_next_main_order(novel.chapters)
 
     # 如果是分支章节，验证父章节是否存在
     if chapter_data.parent_chapter_id:

@@ -10,7 +10,8 @@
 "use client";
 
 import { useState } from "react";
-import { Check, X, Loader2, ArrowLeftRight, Columns, Rows } from "lucide-react";
+import type { ComponentProps } from "react";
+import { Check, Loader2, ArrowLeftRight, Columns, Rows } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -224,7 +225,7 @@ export function ComparisonDialog({
   );
 }
 
-function SparklesIcon(props: any) {
+function SparklesIcon(props: ComponentProps<"svg">) {
   return (
     <svg
       {...props}

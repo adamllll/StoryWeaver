@@ -46,7 +46,6 @@ export function BatchOptimizeDialog({
   onPreview,
 }: BatchOptimizeDialogProps) {
   const [selectedChapters, setSelectedChapters] = useState<number[]>([]);
-  const [isOptimizing, setIsOptimizing] = useState(false);
   const [results, setResults] = useState<OptimizationResult[]>([]);
   const [currentStep, setCurrentStep] = useState<"select" | "processing" | "complete">("select");
 
@@ -72,7 +71,6 @@ export function BatchOptimizeDialog({
   const handleStartOptimize = async () => {
     if (selectedChapters.length === 0) return;
 
-    setIsOptimizing(true);
     setCurrentStep("processing");
 
     // 初始化结果
@@ -87,8 +85,6 @@ export function BatchOptimizeDialog({
       setCurrentStep("complete");
     } catch (error) {
       console.error("批量优化失败:", error);
-    } finally {
-      setIsOptimizing(false);
     }
   };
 

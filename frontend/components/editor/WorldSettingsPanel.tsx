@@ -5,7 +5,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Plus, Edit, Trash2, Save, X, Globe } from "lucide-react";
 import { worldSettingsApi, WorldSetting, WorldSettingType, ApiError } from "@/lib/api";
 import { useToast } from "@/components/ui/use-toast";
@@ -40,12 +40,7 @@ export function WorldSettingsPanel({ novelId }: WorldSettingsPanelProps) {
     description: "",
   });
 
-  // 加载世界观设定
-  useEffect(() => {
-    loadSettings();
-  }, [novelId]);
-
-  const loadSettings = async () => {
+  const loadSettings = useCallback(async () => {
     setIsLoading(true);
     try {
       const data = await worldSettingsApi.list(novelId);
@@ -61,7 +56,12 @@ export function WorldSettingsPanel({ novelId }: WorldSettingsPanelProps) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [novelId, toast]);
+
+  // 加载世界观设定
+  useEffect(() => {
+    loadSettings();
+  }, [loadSettings]);
 
   // 创建新设定
   const handleCreate = async () => {

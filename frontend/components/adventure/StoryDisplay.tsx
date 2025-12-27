@@ -19,39 +19,44 @@ function TypewriterText({ text }: { text: string }) {
   const [currentParagraphIndex, setCurrentParagraphIndex] = useState(0);
   const [isComplete, setIsComplete] = useState(false);
 
-  // 智能格式化：如果没有段落分隔，自动添加
+  // 智能格式化：确保段落正确分隔，适配不同的AI输出格式
   const formatContent = (content: string): string => {
-    // 如果已经有段落分隔，直接返回
-    if (content.includes('\n\n')) {
-      return content;
+    // 步骤1: 清理内容，去除首尾空白
+    let formatted = content.trim();
+
+    // 步骤2: 统一换行符（处理Windows风格的\r\n）
+    formatted = formatted.replace(/\r\n/g, '\n');
+
+    // 步骤3: 处理AI可能返回的各种格式
+    // 如果已经有双换行符（正确格式），保留并清理多余空行
+    if (formatted.includes('\n\n')) {
+      // 将3个或更多换行符压缩为2个
+      formatted = formatted.replace(/\n{3,}/g, '\n\n');
+      return formatted;
     }
 
-    // 否则按句号分割并每3-4句合并为一个段落
-    const sentences = content.split(/([。！？])/);
-    const paragraphs: string[] = [];
-    let currentParagraph = '';
-    let sentenceCount = 0;
+    // 步骤4: 如果只有单换行符，需要智能处理
+    // 将单个换行符转换为双换行符（让每行都成为独立段落）
+    formatted = formatted.replace(/\n/g, '\n\n');
 
-    for (let i = 0; i < sentences.length; i += 2) {
-      if (i + 1 < sentences.length) {
-        currentParagraph += sentences[i] + sentences[i + 1];
-        sentenceCount++;
+    // 步骤5: 如果连换行符都没有，尝试按句子分段
+    if (!formatted.includes('\n')) {
+      const sentences = formatted.match(/[^。！？.!?]+[。！？.!?]+/g) || [];
 
-        // 每3句形成一个段落
-        if (sentenceCount >= 3) {
-          paragraphs.push(currentParagraph.trim());
-          currentParagraph = '';
-          sentenceCount = 0;
+      if (sentences.length > 0) {
+        // 每2-3句合并为一段
+        const paragraphs: string[] = [];
+        for (let i = 0; i < sentences.length; i += 3) {
+          const chunk = sentences.slice(i, i + 3).join('').trim();
+          if (chunk) {
+            paragraphs.push(chunk);
+          }
         }
+        return paragraphs.join('\n\n');
       }
     }
 
-    // 添加剩余内容
-    if (currentParagraph.trim()) {
-      paragraphs.push(currentParagraph.trim());
-    }
-
-    return paragraphs.join('\n\n');
+    return formatted;
   };
 
   // 按双换行符分割段落，过滤空段落
@@ -85,8 +90,19 @@ function TypewriterText({ text }: { text: string }) {
   const displayText = paragraphs.slice(0, currentParagraphIndex + 1).join('\n\n');
 
   return (
-    <div className="prose prose-lg prose-gray max-w-none prose-p:leading-relaxed prose-headings:font-bold prose-strong:text-purple-700">
-      <ReactMarkdown>{displayText}</ReactMarkdown>
+    <div className="prose prose-lg prose-gray max-w-none font-serif text-justify
+                    prose-p:leading-relaxed prose-p:mb-4 prose-p:indent-8
+                    prose-headings:font-bold prose-headings:mb-4
+                    prose-strong:text-purple-700
+                    [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+      <ReactMarkdown
+        components={{
+          // 自定义段落组件，确保段落间距
+          p: ({ children }) => <p className="mb-4 last:mb-0">{children}</p>,
+        }}
+      >
+        {displayText}
+      </ReactMarkdown>
       {!isComplete && <span className="inline-block w-2 h-5 bg-purple-500 ml-1 animate-pulse"/>}
     </div>
   );

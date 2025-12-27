@@ -136,15 +136,25 @@ export function GameEndDialog({
         };
 
   const handleClose = () => {
+    // "稍后查看"应该关闭对话框并返回列表，而不是停留在当前页面
     onOpenChange(false);
+    router.push("/adventures");
   };
 
   const handleBackToList = () => {
     router.push("/adventures");
   };
 
+  // 用户通过任何方式关闭对话框时，都导航回列表页
+  const handleDialogChange = (isOpen: boolean) => {
+    if (!isOpen) {
+      router.push("/adventures");
+    }
+    onOpenChange(isOpen);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleDialogChange}>
       <DialogContent
         className={cn(
           "max-w-2xl bg-gradient-to-br",

@@ -38,7 +38,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     initAuth();
-  }, []); // 空依赖数组，只在首次挂载时执行
+  }, [checkAuth, isInitialized]);
 
   // 认证检查期间显示加载界面
   if (isChecking) {

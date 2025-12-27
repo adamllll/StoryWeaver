@@ -34,8 +34,6 @@ import {
   GripVertical,
   Search,
   X,
-  ChevronDown,
-  ChevronUp,
   BookOpen,
   List,
   MoreVertical,
@@ -180,10 +178,23 @@ function SortableChapterItem({
             </div>
 
              {/* 悬停操作按钮 */}
-             <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity">
+             <div className="absolute right-2 top-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button
+                  className="p-1 hover:bg-red-50 rounded text-gray-400 hover:text-red-600"
+                  title="删除章节"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (confirm(`确定要删除章节「${chapter.title}」吗？`)) {
+                      void onChapterDelete(chapter.id);
+                    }
+                  }}
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
                 <button 
                   className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-gray-600"
-                  onClick={(e) => { e.stopPropagation(); /* 触发菜单 */ }}
+                  title="更多操作（右键）"
+                  onClick={(e) => { e.stopPropagation(); }}
                 >
                   <MoreVertical className="w-3.5 h-3.5" />
                 </button>
@@ -215,6 +226,12 @@ export function EnhancedChapterList({
   const [isFilterExpanded, setIsFilterExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState<"chapters" | "outline">("chapters");
   const { toast } = useToast();
+
+  const handleTabChange = (value: string) => {
+    if (value === "chapters" || value === "outline") {
+      setActiveTab(value);
+    }
+  };
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }), // 防止点击触发拖拽
@@ -278,7 +295,7 @@ export function EnhancedChapterList({
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* 顶部 Tab 栏 */}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="flex flex-col h-full">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="flex flex-col h-full">
         <div className="px-4 pt-4 pb-2 flex-shrink-0">
           <TabsList className="w-full h-10 bg-gray-100/50 p-1 rounded-ios-lg grid grid-cols-2">
             <TabsTrigger 
@@ -298,7 +315,7 @@ export function EnhancedChapterList({
           </TabsList>
         </div>
 
-        <TabsContent value="chapters" className="flex-1 flex flex-col m-0 overflow-hidden outline-none data-[state=inactive]:hidden data-[state=inactive]:!flex-none">
+        <TabsContent value="chapters" className="flex-1 m-0 overflow-hidden outline-none data-[state=inactive]:hidden data-[state=active]:flex data-[state=active]:flex-col">
           
           {/* 工具栏 */}
           <div className="px-4 pb-3 space-y-3 flex-shrink-0">
@@ -457,12 +474,10 @@ export function EnhancedChapterList({
                 </DndContext>
              )}
              
-             {/* 底部留白 */}
-             <div className="h-12" />
           </div>
         </TabsContent>
 
-        <TabsContent value="outline" className="flex-1 flex flex-col !m-0 !mt-0 !p-0 overflow-hidden outline-none data-[state=active]:flex">
+        <TabsContent value="outline" className="flex-1 !m-0 !mt-0 !p-0 overflow-hidden outline-none data-[state=inactive]:hidden data-[state=active]:flex data-[state=active]:flex-col">
           {outline ? (
             <div className="flex-1 overflow-y-auto custom-scrollbar px-6 py-4 bg-white/30">
                <article className="prose prose-sm prose-purple max-w-none !mt-0 !pt-0 prose-headings:font-serif prose-p:my-2 prose-headings:my-3 prose-headings:first:mt-0 [&>*:first-child]:!mt-0 [&>*:first-child]:!pt-0 [&>h1:first-child]:!mt-0 [&>h2:first-child]:!mt-0 [&>p:first-child]:!mt-0 [&>ol:first-child]:!mt-0 [&>ul:first-child]:!mt-0">

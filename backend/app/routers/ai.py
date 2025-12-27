@@ -50,15 +50,63 @@ from ..utils.prompts import (
 router = APIRouter(prefix="/ai", tags=["AI生成"])
 logger = logging.getLogger(__name__)
 
+def html_to_text(value: str) -> str:
+    """将 HTML 转为纯文本，尽量保留段落结构。"""
+    if not value:
+        return ""
+
+    text = value
+    text = re.sub(r"<br\s*/?>", "\n", text, flags=re.IGNORECASE)
+    text = re.sub(r"</p\s*>", "\n\n", text, flags=re.IGNORECASE)
+    text = re.sub(r"</div\s*>", "\n\n", text, flags=re.IGNORECASE)
+    text = re.sub(r"</h[1-6]\s*>", "\n\n", text, flags=re.IGNORECASE)
+    text = re.sub(r"</li\s*>", "\n", text, flags=re.IGNORECASE)
+    text = re.sub(r"<[^>]+>", "", text)
+    text = (
+        text.replace("&nbsp;", " ")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&amp;", "&")
+    )
+    text = re.sub(r"[ \t]{2,}", " ", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()
+
+
+def build_context_excerpt(raw_text: str, max_chars: int = 4000, max_paragraphs: int = 4) -> str:
+    """从原文中提取更连贯的上下文摘要。"""
+    clean_text = html_to_text(raw_text)
+    if not clean_text:
+        return ""
+
+    if len(clean_text) <= max_chars:
+        return clean_text
+
+    paragraphs = [p.strip() for p in clean_text.split("\n\n") if p.strip()]
+    if paragraphs:
+        excerpt = "\n\n".join(paragraphs[-max_paragraphs:])
+    else:
+        excerpt = clean_text
+
+    if len(excerpt) > max_chars:
+        excerpt = excerpt[-max_chars:]
+
+    return excerpt.strip()
+
 
 def extract_title_and_content(markdown_text: str) -> tuple[str, str]:
     """
-    从Markdown文本中提取第一个标题和正文
+    从Markdown文本中提取第一个标题和正文（改进版）
 
     支持多种标题格式：
     1. Markdown 格式：# 标题 或 ## 标题
-    2. 中文章节格式：第X章 标题
-    3. 纯标题行：第一个非空行且较短（<50字）
+    2. 中文章节格式：第X章 标题、第X节、第X回
+    3. 纯标题行：第一个非空行且较短（<100字）
+
+    改进点：
+    - 放宽长度限制：50字 → 100字
+    - 增加中文章节格式匹配
+    - 检查下一行是否为空行（标题与正文通常有空行分隔）
 
     示例:
     输入: "# 第一章：开端\n\n正文内容..."
@@ -83,32 +131,115 @@ def extract_title_and_content(markdown_text: str) -> tuple[str, str]:
         if not line_stripped:
             continue
 
-        # 1. 匹配 Markdown 标题 (# 或 ## 开头的行)
+        # 1. 优先匹配 Markdown 标题 (# 或 ## 开头的行) - 无长度限制
         md_match = re.match(r'^#+\s*(.+)', line_stripped)
         if md_match:
             title = md_match.group(1).strip()
             content_start = i + 1
             break
 
-        # 2. 匹配中文章节格式：第X章、第X节、第X回 等
-        chapter_match = re.match(r'^第.+?[章节回][\s：:]*(.*)$', line_stripped)
+        # 2. 匹配中文章节格式：第X章、第X节、第X回 等（支持各种变体）
+        chapter_match = re.match(r'^第[一二三四五六七八九十百千\d]+[章节回]\s*[：:、]?\s*(.*)$', line_stripped)
         if chapter_match:
             title = line_stripped
             content_start = i + 1
             break
 
-        # 3. 第一个非空行且较短（可能是标题）
-        if i == 0 and len(line_stripped) < 50 and not line_stripped.endswith(('。', '！', '？', '…', '"', '"')):
+        # 3. 匹配其他章节格式（如"第X章"后跟标题）
+        chapter_match2 = re.match(r'^第.+?[章节回][\s：:]*(.*)$', line_stripped)
+        if chapter_match2:
             title = line_stripped
             content_start = i + 1
             break
 
-        # 如果第一个非空行很长或以标点结尾，说明没有标题
+        # 4. 检查是否为独立标题行（放宽限制）
+        # 条件：不超过100字，不以句末标点结尾，且下一行为空行或正文
+        is_short_enough = len(line_stripped) <= 100
+        is_not_sentence_end = not line_stripped.endswith(('。', '！', '？', '；', '…', '"', '"', '."', '!"', '?"'))
+
+        # 检查下一行是否为空行（标题与正文之间通常有空行）
+        next_line_is_empty = (i + 1 < len(lines) and not lines[i + 1].strip())
+
+        if i == 0 and is_short_enough and is_not_sentence_end:
+            title = line_stripped
+            content_start = i + 1
+            break
+
+        # 如果第一个非空行很长或以句末标点结尾，说明没有标题
         break
 
-    # 提取正文
-    content = '\n'.join(lines[content_start:]).strip()
+    # 提取正文，跳过标题后的空行
+    content_lines = lines[content_start:]
+    # 去除开头的空行
+    while content_lines and not content_lines[0].strip():
+        content_lines = content_lines[1:]
+    content = '\n'.join(content_lines).strip()
+
     return title, content
+
+
+def is_generic_chapter_title(title: str) -> bool:
+    """
+    判断章节标题是否过于通用或缺失
+
+    规则：
+    - 空标题视为无效
+    - 仅包含“第X章”且无副标题视为无效
+    - 明确的占位词视为无效
+    """
+    if not title or not title.strip():
+        return True
+
+    cleaned_title = re.sub(r'^#+\s*', '', title.strip())
+    cleaned_title = cleaned_title.rstrip("：:").strip()
+
+    generic_titles = {"续写内容", "章节标题", "无题", "未命名章节"}
+    if cleaned_title in generic_titles:
+        return True
+
+    if re.fullmatch(r"第[一二三四五六七八九十百千\d]+章", cleaned_title):
+        return True
+
+    return False
+
+
+def extract_json_from_response(response_str: str) -> str | None:
+    """
+    从 AI 响应中提取 JSON 部分（借鉴参考项目的实现）
+
+    支持两种格式：
+    1. ```json ... ``` 代码块
+    2. 直接的 JSON 对象 { ... }
+
+    参数:
+        response_str: AI 响应的原始字符串
+
+    返回:
+        提取的 JSON 字符串，如果未找到则返回 None
+    """
+    if not response_str:
+        return None
+
+    # 尝试从 ```json 代码块中提取
+    if "```json" in response_str:
+        start_pos = response_str.find("```json") + 7
+        end_pos = response_str.find("```", start_pos)
+        if end_pos != -1:
+            return response_str[start_pos:end_pos].strip()
+
+    # 尝试直接找 JSON 对象（使用括号匹配）
+    start_pos = response_str.find("{")
+    if start_pos != -1:
+        brace_level = 0
+        for i in range(start_pos, len(response_str)):
+            if response_str[i] == "{":
+                brace_level += 1
+            elif response_str[i] == "}":
+                brace_level -= 1
+                if brace_level == 0:
+                    return response_str[start_pos : i + 1]
+
+    return None
 
 
 def extract_scene_from_chapter(chapter: Chapter) -> str:
@@ -301,16 +432,47 @@ async def continue_chapter(
             detail="您没有权限编辑此小说",
         )
 
-    # 获取前文内容作为摘要
+    # 获取前文内容作为摘要 - 支持光标位置
     previous_summary = ""
+    previous_title = ""
+    current_chapter = None
     if request.chapter_id:
         chapter = db.query(Chapter).filter(
             Chapter.id == request.chapter_id,
             Chapter.novel_id == request.novel_id,
         ).first()
         if chapter:
-            # 取最后2000字符作为前情提要
-            previous_summary = chapter.content[-2000:] if chapter.content else ""
+            current_chapter = chapter
+            previous_title = chapter.title or ""
+            if chapter.content:
+                if request.cursor_position is not None and request.cursor_position > 0:
+                    content_before_cursor = chapter.content[:request.cursor_position]
+                    previous_summary = build_context_excerpt(content_before_cursor, max_chars=4000)
+                    logger.info(
+                        f"从光标位置 {request.cursor_position} 开始续写，取前文 {len(previous_summary)} 字"
+                    )
+                else:
+                    previous_summary = build_context_excerpt(chapter.content, max_chars=4000)
+            else:
+                # 新章节为空时，回退使用上一章内容作为上下文
+                prev_chapter = db.query(Chapter).filter(
+                    Chapter.novel_id == request.novel_id,
+                    Chapter.order_num < chapter.order_num,
+                ).order_by(Chapter.order_num.desc()).first()
+                if prev_chapter and prev_chapter.content:
+                    previous_title = prev_chapter.title or previous_title
+                    previous_summary = build_context_excerpt(prev_chapter.content, max_chars=4000)
+                    logger.info(
+                        f"新章节内容为空，使用上一章内容作为上下文: prev_chapter_id={prev_chapter.id}"
+                    )
+
+        if previous_summary:
+            # 去掉可能存在的标题行，避免标题被复用
+            extracted_title, extracted_body = extract_title_and_content(previous_summary)
+            if extracted_body:
+                previous_summary = extracted_body
+            if not previous_title and extracted_title:
+                previous_title = extracted_title
 
     # 获取角色信息 JSON
     characters_list = [
@@ -356,6 +518,48 @@ async def continue_chapter(
         else:
             chapter_outline = "根据前文内容和小说设定，自由发挥创作下一章节"
 
+    def normalize_title(title: str) -> str:
+        cleaned = re.sub(r"^#+\s*", "", title or "").strip()
+        cleaned = re.sub(r"^第[一二三四五六七八九十百千\d]+章[:：\s-]*", "", cleaned)
+        cleaned = re.sub(r"[\s\-—_·。！？：:，,、…\"'（）()【】\[\]《》<>]", "", cleaned)
+        return cleaned.lower()
+
+    def is_title_too_similar(title: str, previous: str) -> bool:
+        if not title or not previous:
+            return False
+
+        norm_title = normalize_title(title)
+        norm_prev = normalize_title(previous)
+        if not norm_title or not norm_prev:
+            return False
+
+        if norm_title == norm_prev:
+            return True
+
+        if norm_prev in norm_title or norm_title in norm_prev:
+            return True
+
+        title_set = set(norm_title)
+        prev_set = set(norm_prev)
+        if not title_set or not prev_set:
+            return False
+
+        overlap = len(title_set & prev_set) / len(title_set | prev_set)
+        return overlap >= 0.7
+
+    def resolve_chapter_number(chapter: Chapter | None, total_count: int) -> int:
+        if chapter:
+            title_match = re.search(r"第\s*(\d+)\s*章", chapter.title or "")
+            if title_match:
+                return int(title_match.group(1))
+
+            if isinstance(chapter.order_num, (int, float)) and float(chapter.order_num).is_integer():
+                order_num = int(chapter.order_num)
+                if order_num > 0:
+                    return order_num
+
+        return total_count + 1
+
     system_prompt, user_prompt = get_continue_prompt(
         category=novel.category,
         style=style,
@@ -363,41 +567,183 @@ async def continue_chapter(
         world_settings=world_settings,
         previous_summary=previous_summary or "这是小说的开篇",
         chapter_outline=chapter_outline,
+        previous_chapter_title=previous_title or "无",
         word_count=request.word_count,
         special_requirements=request.special_requirements or "无",
     )
 
+    min_words = int(request.word_count * 0.9)
+    max_words = int(request.word_count * 1.1)
+
+    # 记录可能成功的正文，便于标题补救
+    best_body = ""
+
+    MAX_RETRIES = 3
+    last_error = None
+    last_word_count = 0
+    last_title = ""
+    total_usage = None
+
     try:
-        logger.info(f"AI 续写开始: novel_id={request.novel_id}, user_id={current_user.id}")
-        content, usage = await ai_service.generate(
-            system_prompt=system_prompt,
-            user_prompt=user_prompt,
-            max_tokens=request.word_count * 2,
-            temperature=0.7,
-        )
+        for attempt in range(MAX_RETRIES):
+            current_user_prompt = user_prompt
+            if attempt > 0:
+                warnings = []
+                if last_word_count and last_word_count < min_words:
+                    warnings.append(f"上次输出 {last_word_count} 字，低于最低要求 {min_words} 字")
+                if is_generic_chapter_title(last_title):
+                    warnings.append("标题不够具体或缺失，请生成有创意的章节标题")
 
-        generated_content = content.strip() if content else ""
+                if warnings:
+                    warning_prompt = "⚠️ 纠正提示：\n" + "\n".join(f"- {w}" for w in warnings) + "\n\n"
+                    current_user_prompt = warning_prompt + user_prompt
+                    logger.info(
+                        f"重试 {attempt + 1}: 添加强化提示，"
+                        f"last_word_count={last_word_count}, last_title={last_title or '空'}"
+                    )
 
-        # 如果生成内容为空，返回错误提示
-        if not generated_content:
-            logger.warning(f"AI 续写生成空内容: novel_id={request.novel_id}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="AI 生成了空内容，请重试或调整提示词",
+            logger.info(
+                f"AI 续写尝试 {attempt + 1}/{MAX_RETRIES}: novel_id={request.novel_id}, "
+                f"user_id={current_user.id}, target_range={min_words}-{max_words}"
             )
 
-        # 从生成内容中提取标题（如果有）
-        generated_title, generated_body = extract_title_and_content(generated_content)
-        if generated_title:
-            logger.info(f"从生成内容中提取到标题: {generated_title}")
+            raw_response, usage = await ai_service.generate(
+                system_prompt=system_prompt,
+                user_prompt=current_user_prompt,
+                max_tokens=request.word_count * 3,
+                temperature=0.7,
+                task="continue",
+            )
 
-        logger.info(f"AI 续写完成: word_count={len(generated_body)}, tokens={usage.total_tokens}")
+            generated_content = raw_response.strip() if raw_response else ""
 
-        return ContinueResponse(
-            content=generated_body,
-            title=generated_title,
-            word_count=len(generated_body),
-            usage=usage,
+            if total_usage is None:
+                total_usage = usage
+            else:
+                total_usage = AIUsage(
+                    prompt_tokens=total_usage.prompt_tokens + usage.prompt_tokens,
+                    completion_tokens=total_usage.completion_tokens + usage.completion_tokens,
+                    total_tokens=total_usage.total_tokens + usage.total_tokens,
+                )
+
+            if not generated_content:
+                last_error = "AI 生成了空内容"
+                logger.warning(
+                    f"续写尝试 {attempt + 1} 失败: {last_error}, novel_id={request.novel_id}"
+                )
+                continue
+
+            generated_title, generated_body = extract_title_and_content(generated_content)
+            if not generated_body:
+                generated_body = generated_content
+
+            generated_word_count = len(generated_body)
+            if generated_word_count > len(best_body):
+                best_body = generated_body
+
+            if generated_word_count < min_words:
+                last_word_count = generated_word_count
+                last_title = generated_title
+                last_error = f"输出字数 {generated_word_count} 低于最低要求 {min_words}（目标范围 {min_words}-{max_words}）"
+                logger.warning(
+                    f"续写尝试 {attempt + 1} 失败: {last_error}, novel_id={request.novel_id}"
+                )
+                continue
+
+            if is_generic_chapter_title(generated_title):
+                last_word_count = generated_word_count
+                last_title = generated_title
+                last_error = "章节标题缺失或过于通用"
+                logger.warning(
+                    f"续写尝试 {attempt + 1} 失败: {last_error}, novel_id={request.novel_id}"
+                )
+                continue
+
+            if previous_title and is_title_too_similar(generated_title, previous_title):
+                last_word_count = generated_word_count
+                last_title = generated_title
+                last_error = "章节标题与上一章重复或过于相似"
+                logger.warning(
+                    f"续写尝试 {attempt + 1} 失败: {last_error}, novel_id={request.novel_id}"
+                )
+                continue
+
+            logger.info(
+                f"AI 续写成功: title={generated_title}, word_count={generated_word_count}, "
+                f"attempts={attempt + 1}, total_tokens={total_usage.total_tokens}"
+            )
+
+            return ContinueResponse(
+                content=generated_body,
+                title=generated_title,
+                word_count=generated_word_count,
+                usage=total_usage,
+            )
+
+        # 标题补救：保留达标的正文，仅补生成创意标题
+        if best_body and len(best_body) >= min_words:
+            chapter_count = db.query(Chapter).filter(Chapter.novel_id == request.novel_id).count()
+            chapter_number = resolve_chapter_number(current_chapter, chapter_count)
+
+            title_system_prompt = "你是一位擅长起章节标题的小说编辑。"
+            title_user_prompt = (
+                f"根据以下章节正文生成一个简洁有创意的标题。\n"
+                f"要求：10-15字以内，不要包含“第{chapter_number}章”，不要添加任何说明，"
+                f"且不要与上一章标题“{previous_title or '无'}”重复或高度相似。\n\n"
+                f"正文：\n{best_body[:1500]}"
+            )
+
+            title_response, title_usage = await ai_service.generate(
+                system_prompt=title_system_prompt,
+                user_prompt=title_user_prompt,
+                max_tokens=80,
+                temperature=0.7,
+                task="continue",
+            )
+
+            if total_usage is None:
+                total_usage = title_usage
+            else:
+                total_usage = AIUsage(
+                    prompt_tokens=total_usage.prompt_tokens + title_usage.prompt_tokens,
+                    completion_tokens=total_usage.completion_tokens + title_usage.completion_tokens,
+                    total_tokens=total_usage.total_tokens + title_usage.total_tokens,
+                )
+
+            fallback_title = (title_response or "").strip()
+            fallback_title = fallback_title.splitlines()[0] if fallback_title else ""
+            fallback_title = re.sub(
+                r"^第[一二三四五六七八九十百千\d]+章[:：\s]*", "", fallback_title
+            ).strip()
+            if not fallback_title or is_title_too_similar(fallback_title, previous_title or ""):
+                fallback_candidates = [
+                    "新的转折",
+                    "暗流涌动",
+                    "风暴前夜",
+                    "迷局加深",
+                    "裂隙初现",
+                    "危机逼近",
+                ]
+                fallback_title = fallback_candidates[chapter_number % len(fallback_candidates)]
+
+            generated_title = f"第{chapter_number}章 {fallback_title}"
+
+            logger.info(
+                f"AI 续写标题补救成功: title={generated_title}, word_count={len(best_body)}, "
+                f"attempts={MAX_RETRIES}, total_tokens={total_usage.total_tokens}"
+            )
+
+            return ContinueResponse(
+                content=best_body,
+                title=generated_title,
+                word_count=len(best_body),
+                usage=total_usage,
+            )
+
+        # 所有重试都失败
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"AI 续写失败（已重试 {MAX_RETRIES} 次）: {last_error}",
         )
 
     except HTTPException:
@@ -432,43 +778,147 @@ async def expand_text(
         text=request.text,
         style=request.style,
         word_count=request.word_count,
+        chapter_title=request.chapter_title or "未命名章节",
+        context_before=request.context_before or "",
+        context_after=request.context_after or "",
+        position_hint=request.position_hint or "未知",
     )
 
-    try:
-        logger.info(f"AI 扩写开始: user_id={current_user.id}, style={request.style}")
-        content, usage = await ai_service.generate(
-            system_prompt=system_prompt,
-            user_prompt=user_prompt,
-            max_tokens=request.word_count * 2,
-            temperature=0.7,
-        )
+    # 计算目标字数范围（与提示词一致）
+    min_words = int(request.word_count * 0.8)
+    max_words = int(request.word_count * 1.2)
 
-        expanded_text = content.strip() if content else ""
+    # 重试机制配置（根据目标字数动态调整）
+    MAX_RETRIES = min(8, max(3, int(min_words / 80)))
+    last_error = None
+    total_usage = None
+    last_word_count = 0
+    best_text = ""
+    best_word_count = 0
+    accumulated_text = ""
 
-        # 如果生成内容为空，返回错误提示
-        if not expanded_text:
-            logger.warning(f"AI 扩写生成空内容: user_id={current_user.id}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="AI 生成了空内容，请重试或调整提示词",
+    for attempt in range(MAX_RETRIES):
+        try:
+            current_user_prompt = user_prompt
+            if accumulated_text:
+                continue_prompt = f"""请在以下扩写内容基础上继续补写，直到达到 {min_words}-{max_words} 字。
+
+## 已扩写内容（请勿重复）
+{accumulated_text}
+
+## 补写要求
+1. 仅输出新增内容，不要重复已扩写内容
+2. 保持风格一致并与上下文连贯
+3. 字数补足到目标范围
+"""
+                current_user_prompt = continue_prompt
+            elif attempt > 0 and last_word_count < min_words:
+                warning_prompt = f"""⚠️ 警告：上次输出只有 {last_word_count} 字，远低于要求的 {min_words} 字！
+
+这是"扩写"任务，不是"简单加形容词"任务！你必须：
+1. 保留原文的所有内容
+2. 输出至少 {min_words} 字
+
+"""
+                current_user_prompt = warning_prompt + user_prompt
+                logger.info(f"扩写重试 {attempt + 1}: 添加强化警告，上次输出 {last_word_count} 字")
+
+            logger.info(
+                f"AI 扩写尝试 {attempt + 1}/{MAX_RETRIES}: user_id={current_user.id}, "
+                f"style={request.style}, target_range={min_words}-{max_words}"
             )
 
-        logger.info(f"AI 扩写完成: word_count={len(expanded_text)}, tokens={usage.total_tokens}")
+            prompt_chars = len(system_prompt) + len(current_user_prompt)
+            max_tokens = min(4096, max(2048, int(max_words * 8), int(prompt_chars * 2)))
+            content, usage = await ai_service.generate(
+                system_prompt=system_prompt,
+                user_prompt=current_user_prompt,
+                max_tokens=max_tokens,  # 兼容部分兼容层将其视为总token上限
+                temperature=0.7,
+                task="expand",
+            )
 
+            expanded_text = content.strip() if content else ""
+            if accumulated_text:
+                expanded_text = f"{accumulated_text}\n\n{expanded_text}".strip()
+            expanded_word_count = len(expanded_text)
+
+            # 累计 token 使用量
+            if total_usage is None:
+                total_usage = usage
+            else:
+                total_usage = AIUsage(
+                    prompt_tokens=total_usage.prompt_tokens + usage.prompt_tokens,
+                    completion_tokens=total_usage.completion_tokens + usage.completion_tokens,
+                    total_tokens=total_usage.total_tokens + usage.total_tokens,
+                )
+
+            if expanded_word_count > best_word_count:
+                best_text = expanded_text
+                best_word_count = expanded_word_count
+
+            if not expanded_text:
+                last_error = "AI 生成了空内容"
+                logger.warning(
+                    f"扩写尝试 {attempt + 1} 失败: {last_error}, user_id={current_user.id}"
+                )
+                last_word_count = 0
+                continue
+
+            if expanded_word_count < min_words:
+                last_word_count = expanded_word_count
+                last_error = f"输出字数 {expanded_word_count} 低于最低要求 {min_words}（目标范围 {min_words}-{max_words}）"
+                logger.warning(
+                    f"扩写尝试 {attempt + 1} 失败: {last_error}, user_id={current_user.id}"
+                )
+                accumulated_text = expanded_text
+                continue
+
+            logger.info(
+                f"AI 扩写完成: word_count={expanded_word_count}, tokens={total_usage.total_tokens}"
+            )
+
+            return ExpandResponse(
+                expanded_text=expanded_text,
+                word_count=expanded_word_count,
+                usage=total_usage,
+            )
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            last_error = str(e)
+            logger.error(f"扩写尝试 {attempt + 1} 异常: {last_error}, user_id={current_user.id}")
+            if attempt == MAX_RETRIES - 1:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"AI生成失败: {last_error}",
+                )
+
+    # 所有重试都失败
+    if best_text:
+        logger.warning(
+            "AI 扩写未达字数要求，返回最佳结果: "
+            f"user_id={current_user.id}, attempts={MAX_RETRIES}, "
+            f"best_word_count={best_word_count}, last_error={last_error}"
+        )
         return ExpandResponse(
-            expanded_text=expanded_text,
-            word_count=len(expanded_text),
-            usage=usage,
+            expanded_text=best_text,
+            word_count=best_word_count,
+            usage=total_usage,
+            warning=(
+                f"扩写未达到目标字数（目标 {min_words}-{max_words} 字），"
+                f"已返回最佳结果 {best_word_count} 字。"
+            ),
         )
 
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"AI 扩写失败: {str(e)}", extra={"style": request.style})
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"AI生成失败: {str(e)}",
-        )
+    logger.error(
+        f"AI 扩写最终失败: user_id={current_user.id}, attempts={MAX_RETRIES}, last_error={last_error}"
+    )
+    raise HTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        detail=f"AI 扩写失败（已重试 {MAX_RETRIES} 次）: {last_error}",
+    )
 
 
 @router.post("/character", response_model=CharacterResponse)
@@ -537,13 +987,29 @@ async def generate_character(
             return []
 
         def ensure_string(value, field_name: str, default: str = "") -> str:
-            """确保值是字符串，否则尝试转换"""
+            """
+            确保值是字符串，否则尝试智能转换
+
+            改进：对于字典类型，将其转换为可读的格式
+            例如 {"combat": "高", "magic": "中"} -> "combat: 高, magic: 中"
+            """
             if isinstance(value, str):
                 return value
-            if isinstance(value, (dict, list)):
-                logger.warning(f"字段 {field_name} 格式异常: {type(value)}, 转换为字符串")
-                return str(value)
-            return default
+            if value is None:
+                return default
+            if isinstance(value, dict):
+                # 将字典转换为可读字符串
+                try:
+                    parts = [f"{k}: {v}" for k, v in value.items() if v]
+                    logger.warning(f"字段 {field_name} 返回字典格式，已转换为字符串")
+                    return ", ".join(parts) if parts else default
+                except Exception:
+                    return str(value)
+            if isinstance(value, list):
+                # 将列表转换为逗号分隔的字符串
+                logger.warning(f"字段 {field_name} 返回列表格式，已转换为字符串")
+                return ", ".join(str(item) for item in value if item)
+            return str(value) if value else default
 
         character = GeneratedCharacter(
             name=result.get("name") or request.character_name or "未命名角色",
@@ -642,7 +1108,7 @@ async def format_optimize_chapter(
             system_prompt=system_prompt,
             user_prompt=user_prompt,
             max_tokens=len(chapter.content) * 2,  # 预留足够空间
-            temperature=0.3,  # 较低温度，保持稳定性
+            temperature=0.5,  # 中等温度，平衡稳定性和表达多样性
             task="expand",  # 复用 expand 任务的模型配置
         )
 
@@ -696,8 +1162,9 @@ async def format_optimize_batch(
     返回:
         每个章节的优化结果及总体统计
     """
-    # 速率限制检查（批量操作按单次请求计费）
-    ai_rate_limiter.check(current_user.id)
+    # 速率限制检查（批量操作按章节数量计费）
+    chapter_count = len(request.chapter_ids)
+    ai_rate_limiter.check(current_user.id, cost=chapter_count)
 
     # 验证小说权限
     novel = db.query(Novel).filter(Novel.id == request.novel_id).first()
@@ -765,7 +1232,7 @@ async def format_optimize_batch(
                 system_prompt=system_prompt,
                 user_prompt=user_prompt,
                 max_tokens=len(chapter.content) * 2,
-                temperature=0.3,
+                temperature=0.5,  # 中等温度，平衡稳定性和表达多样性
                 task="expand",
             )
 
@@ -896,17 +1363,42 @@ async def rewrite_text(
         (original_word_count, original_word_count)
     )
 
-    # 设置验证阈值：至少达到目标下限的90%，且不低于30字
-    # 这样可以避免 Gemini 模型输出过短的内容
-    validation_min = max(int(min_words * 0.9), 30)
+    # 设置验证阈值：根据重写风格调整验证标准
+    # 不同风格对字数的要求不同，需要分别处理
+    validation_thresholds = {
+        "保持原意": 0.8,      # 至少保留原文80%
+        "增强感染力": 1.0,    # 至少保留原文100%（因为是扩展）
+        "简化表达": 0.5,      # 允许精简到原文50%
+        "改变视角": 0.8,      # 至少保留原文80%
+        "增加对话": 1.0,      # 至少保留原文100%
+        "增加描写": 1.0,      # 至少保留原文100%
+    }
+    threshold = validation_thresholds.get(request.rewrite_style, 0.8)
+    validation_min = max(int(original_word_count * threshold), 30)
 
     # 重试机制配置
     MAX_RETRIES = 3
     last_error = None
     total_usage = None
+    last_word_count = 0  # 记录上次输出的字数，用于重试时的警告
+    best_text = ""
+    best_word_count = 0
 
     for attempt in range(MAX_RETRIES):
         try:
+            # 重试时添加强化警告
+            current_user_prompt = user_prompt
+            if attempt > 0 and last_word_count < validation_min:
+                warning_prompt = f"""⚠️ 警告：上次输出只有 {last_word_count} 字，远低于要求的 {min_words} 字！
+
+这是"重写"任务，不是"总结"任务！你必须：
+1. 保留原文的所有内容（情节、对话、描写）
+2. 输出至少 {min_words} 字
+
+"""
+                current_user_prompt = warning_prompt + user_prompt
+                logger.info(f"重试 {attempt + 1}: 添加强化警告，上次输出 {last_word_count} 字")
+
             logger.info(
                 f"AI 重写尝试 {attempt + 1}/{MAX_RETRIES}: novel_id={request.novel_id}, "
                 f"user_id={current_user.id}, style={request.rewrite_style}, "
@@ -914,15 +1406,18 @@ async def rewrite_text(
             )
 
             # 调用 AI 服务
-            rewritten_text, usage = await ai_service.generate(
+            prompt_chars = len(system_prompt) + len(user_prompt)
+            max_tokens = min(4096, max(2048, int(max_words * 8), int(prompt_chars * 2)))
+            raw_response, usage = await ai_service.generate(
                 system_prompt=system_prompt,
-                user_prompt=user_prompt,
-                max_tokens=original_word_count * 3,  # 预留足够空间（某些风格可能大幅扩写）
+                user_prompt=current_user_prompt,
+                max_tokens=max_tokens,  # 预留足够空间（兼容部分兼容层将其视为总token上限）
                 temperature=0.7,  # 中等温度，保持创意性
-                task="expand",  # 复用 expand 任务的模型配置
+                task="rewrite",
             )
 
-            rewritten_text = rewritten_text.strip()
+            # 直接使用响应内容（不再使用 JSON 格式）
+            rewritten_text = raw_response.strip()
             rewritten_word_count = len(rewritten_text)
 
             # 累计 token 使用量
@@ -935,6 +1430,10 @@ async def rewrite_text(
                     total_tokens=total_usage.total_tokens + usage.total_tokens,
                 )
 
+            if rewritten_word_count > best_word_count:
+                best_text = rewritten_text
+                best_word_count = rewritten_word_count
+
             # 验证：检查是否为空
             if not rewritten_text:
                 last_error = "AI 生成了空内容"
@@ -945,6 +1444,7 @@ async def rewrite_text(
 
             # 验证：检查字数是否符合要求
             if rewritten_word_count < validation_min:
+                last_word_count = rewritten_word_count  # 记录字数，用于下次重试的警告
                 last_error = f"输出字数 {rewritten_word_count} 低于最低要求 {validation_min}（目标范围 {min_words}-{max_words}）"
                 logger.warning(
                     f"重写尝试 {attempt + 1} 失败: {last_error}, novel_id={request.novel_id}"
@@ -979,6 +1479,23 @@ async def rewrite_text(
                 )
 
     # 所有重试都失败
+    if best_text:
+        logger.warning(
+            "AI 重写未达字数要求，返回最佳结果: "
+            f"novel_id={request.novel_id}, attempts={MAX_RETRIES}, "
+            f"best_word_count={best_word_count}, last_error={last_error}"
+        )
+        return RewriteResponse(
+            rewritten_text=best_text,
+            original_word_count=original_word_count,
+            rewritten_word_count=best_word_count,
+            usage=total_usage,
+            warning=(
+                f"重写未达到目标字数（目标 {min_words}-{max_words} 字），"
+                f"已返回最佳结果 {best_word_count} 字。"
+            ),
+        )
+
     logger.error(
         f"AI 重写最终失败: novel_id={request.novel_id}, "
         f"attempts={MAX_RETRIES}, last_error={last_error}"

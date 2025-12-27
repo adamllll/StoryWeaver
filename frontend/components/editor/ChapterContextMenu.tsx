@@ -23,7 +23,6 @@ import {
   BarChart3,
   Link,
   Star,
-  FileText,
 } from "lucide-react";
 
 interface ChapterContextMenuProps {

@@ -204,6 +204,7 @@ export interface AIAssistantProps {
   currentChapter: Chapter | null;
   editorContent: string;
   onContentInsert: (content: string, replace?: boolean) => void;
+  novelOutline?: string;  // 小说大纲（用于整章生成时参考）
 }
 
 /**

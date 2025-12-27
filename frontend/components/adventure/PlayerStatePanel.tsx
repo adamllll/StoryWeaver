@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Heart, 
@@ -12,15 +12,13 @@ import {
   ChevronDown,
   ChevronUp
 } from "lucide-react";
-import { PlayerState, Item, Relationship } from "@/lib/adventure-types";
+import { PlayerState, Item } from "@/lib/adventure-types";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { cn } from "@/lib/utils";
 
 interface PlayerStatePanelProps {
   state: PlayerState;
   protagonist: string;
-  compact?: boolean;
 }
 
 // ------------------------------------------------------------------
@@ -28,9 +26,10 @@ interface PlayerStatePanelProps {
 // ------------------------------------------------------------------
 function AnimatedNumber({ value, duration = 1000 }: { value: number; duration?: number }) {
   const [displayValue, setDisplayValue] = useState(value);
+  const previousValue = useRef(value);
 
   useEffect(() => {
-    const start = displayValue;
+    const start = previousValue.current;
     const end = value;
     const startTime = Date.now();
 
@@ -49,7 +48,8 @@ function AnimatedNumber({ value, duration = 1000 }: { value: number; duration?: 
     };
 
     animate();
-  }, [value]);
+    previousValue.current = value;
+  }, [value, duration]);
 
   return <span>{displayValue}</span>;
 }
@@ -134,7 +134,7 @@ function ItemCard({ item }: { item: Item }) {
 // ------------------------------------------------------------------
 // Main Component
 // ------------------------------------------------------------------
-export function PlayerStatePanel({ state, protagonist, compact = false }: PlayerStatePanelProps) {
+export function PlayerStatePanel({ state, protagonist }: PlayerStatePanelProps) {
   const [eventsOpen, setEventsOpen] = useState(false);
   const [relationsOpen, setRelationsOpen] = useState(false);
 

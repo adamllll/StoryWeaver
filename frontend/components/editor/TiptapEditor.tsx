@@ -129,25 +129,34 @@ export function TiptapEditor({
     },
   });
 
-  // 同步外部 content 变化（用于 AI 插入内容）
+  // 同步外部 content 变化（用于 AI 插入内容和新章节清空）
   useEffect(() => {
     // 只有当内容真正改变时才更新，避免光标跳动或循环更新
-    if (editor && content && content !== editor.getHTML()) {
+    // 注意：content 可能是空字符串，所以使用 content !== undefined 而不是 content &&
+    if (editor && content !== undefined && content !== editor.getHTML()) {
+      // 特殊处理：如果 content 是空字符串，直接清空编辑器
+      if (content === "") {
+        editor.commands.clearContent();
+        setWordCount(0);
+        onWordCountChange?.(0);
+        return;
+      }
+
       // 尝试将内容作为 Markdown 转换 (marked 支持混合 HTML 和 Markdown)
       // 这解决了 AI 生成的 Markdown (如 **粗体**) 拼接到现有 HTML 后无法渲染的问题
       const htmlContent = markdownToHtml(content);
-      
+
       // 保持光标位置 (如果可能) - setContent 默认会重置光标
       // 这里我们使用 emitUpdate: false 防止触发 onChange 导致循环
-      editor.commands.setContent(htmlContent, { emitUpdate: false }); 
-      
+      editor.commands.setContent(htmlContent, { emitUpdate: false });
+
       // 更新字数统计
       const text = editor.getText();
       const count = text.length;
       setWordCount(count);
       onWordCountChange?.(count);
     }
-  }, [content, editor]);
+  }, [content, editor, onWordCountChange]);
 
   // 组件卸载时销毁编辑器
   useEffect(() => {

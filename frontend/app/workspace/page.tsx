@@ -88,7 +88,7 @@ export default function WorkspacePage() {
     };
 
     fetchNovels();
-  }, [isInitialized, isAuthenticated, user?.id, router, toast]);
+  }, [isInitialized, isAuthenticated, user?.id, router, toast, checkAuth]);
 
   const handleDelete = async (novelId: number) => {
     if (!confirm("确定要删除这部小说吗?此操作不可撤销。")) return;
@@ -225,6 +225,7 @@ export default function WorkspacePage() {
                 {/* 封面区域 */}
                 <div className="relative aspect-[16/9] bg-gradient-to-br from-purple-100 to-purple-50 flex items-center justify-center">
                   {novel.cover_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={novel.cover_url}
                       alt={novel.title}

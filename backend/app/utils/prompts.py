@@ -337,12 +337,19 @@ def get_format_optimize_prompt(
 
 # ========== 文本重写提示词 ==========
 
-REWRITE_SYSTEM_PROMPT = """你是一位专业的小说重写师，擅长根据不同要求重新表达文本内容。你的职责是：
+REWRITE_SYSTEM_PROMPT = """你是一位专业的小说重写师，擅长根据不同要求重新表达文本内容。
 
 **核心原则**：
-1. **理解原意**：准确把握原文的核心意图和情节发展
-2. **风格转换**：根据用户指定的风格进行重写
-3. **保持连贯**：重写后的文本要与故事上下文保持连贯
+1. **字数控制是第一优先级**：必须严格遵守目标字数范围，这是硬性指标
+2. **理解原意**：准确把握原文的核心意图和情节发展
+3. **风格转换**：根据用户指定的风格进行重写
+4. **保持连贯**：重写后的文本要与故事上下文保持连贯
+
+**字数控制规则（强制执行）**：
+- 输出字数必须在目标范围内，否则视为失败
+- 如果目标是 100-130 字，输出必须在 100-130 字之间
+- 宁可稍微超出上限，也不要大幅低于下限
+- 字数不足是最严重的错误
 
 **重写风格说明**：
 - **保持原意**：只优化语言表达，不改变情节和表达方式
@@ -355,7 +362,8 @@ REWRITE_SYSTEM_PROMPT = """你是一位专业的小说重写师，擅长根据�
 **禁止行为**：
 - ❌ 不要改变核心剧情走向
 - ❌ 不要增删关键情节
-- ❌ 不要改变人物基本性格"""
+- ❌ 不要改变人物基本性格
+- ❌ 绝对不要输出少于目标下限的内容"""
 
 REWRITE_USER_TEMPLATE = """请重写以下文本。
 
@@ -369,10 +377,16 @@ REWRITE_USER_TEMPLATE = """请重写以下文本。
 ## 原文
 {original_text}
 
-## 字数控制（重要）
+## ⚠️ 字数控制（强制要求，必须遵守）
 - **原文字数**：{original_word_count}字
 - **目标字数范围**：{target_word_count_range}
-- **要求**：必须严格控制在目标范围内，这是质量标准的重要部分
+- **最低字数**：{min_words}字（低于此数视为失败）
+- **最高字数**：{max_words}字
+
+**字数计算示例**：
+- 原文 {original_word_count} 字
+- 目标范围 {target_word_count_range}
+- 你的输出必须在 {min_words} 到 {max_words} 字之间
 
 ## 重写风格
 {rewrite_style}
@@ -384,7 +398,9 @@ REWRITE_USER_TEMPLATE = """请重写以下文本。
 {special_requirements}
 
 ## 输出要求
-直接输出重写后的文本，使用 Markdown 格式。保持自然流畅，不要添加任何说明性文字。"""
+1. 直接输出重写后的文本，使用 Markdown 格式
+2. 保持自然流畅，不要添加任何说明性文字
+3. **再次强调**：输出字数必须在 {min_words}-{max_words} 字之间"""
 
 
 def get_rewrite_prompt(
@@ -468,6 +484,8 @@ def get_rewrite_prompt(
         characters_info=characters_info,
         original_text=original_text,
         original_word_count=original_word_count,
+        min_words=min_words,  # 新增：最低字数
+        max_words=max_words,  # 新增：最高字数
         target_word_count_range=target_word_count_range,
         rewrite_style=rewrite_style,
         style_details=style_details,

@@ -480,13 +480,13 @@ export const aiApi = {
 
 export const adventureApi = {
   create: (data: CreateAdventureRequest) =>
-    apiClient.post<Adventure>("/adventures", data),
+    apiClient.post<Adventure>("/adventures/", data),
 
   get: (id: number) => apiClient.get<Adventure>(`/adventures/${id}`),
 
   // 修复：后端直接返回数组，不是包装对象
   list: (params?: { page?: number; page_size?: number; status?: string }) =>
-    apiClient.get<Adventure[]>("/adventures", params),
+    apiClient.get<Adventure[]>("/adventures/", params),
 
   choose: (id: number, data: ChoiceRequest) =>
     apiClient.post<ChoiceResponse>(`/adventures/${id}/choose`, data),

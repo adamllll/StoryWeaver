@@ -26,6 +26,7 @@ from ..schemas import (
     OptimizedChapterResult,
     RewriteRequest,
     RewriteResponse,
+    AIUsage,  # 新增：用于重试机制中累计 token 使用量
     # 冒险游戏相关
     OpeningGenerationRequest,
     OpeningGenerationResponse,
@@ -851,52 +852,111 @@ async def rewrite_text(
         special_requirements=request.special_requirements or "无",
     )
 
-    try:
-        logger.info(
-            f"AI 重写开始: novel_id={request.novel_id}, user_id={current_user.id}, "
-            f"style={request.rewrite_style}, original_length={len(request.original_text)}"
-        )
+    # 计算目标字数范围（用于验证）
+    original_word_count = len(request.original_text)
+    target_word_count_ranges = {
+        "保持原意": (int(original_word_count * 0.9), int(original_word_count * 1.1)),
+        "增强感染力": (int(original_word_count * 1.2), int(original_word_count * 1.5)),
+        "简化表达": (int(original_word_count * 0.7), int(original_word_count * 0.9)),
+        "改变视角": (int(original_word_count * 0.9), int(original_word_count * 1.1)),
+        "增加对话": (int(original_word_count * 1.3), int(original_word_count * 1.6)),
+        "增加描写": (int(original_word_count * 1.4), int(original_word_count * 1.8)),
+    }
+    min_words, max_words = target_word_count_ranges.get(
+        request.rewrite_style,
+        (original_word_count, original_word_count)
+    )
 
-        # 调用 AI 服务
-        rewritten_text, usage = await ai_service.generate(
-            system_prompt=system_prompt,
-            user_prompt=user_prompt,
-            max_tokens=len(request.original_text) * 3,  # 预留足够空间（某些风格可能大幅扩写）
-            temperature=0.7,  # 中等温度，保持创意性
-            task="expand",  # 复用 expand 任务的模型配置
-        )
+    # 设置宽松的验证阈值（允许比目标下限再低 20%）
+    validation_min = int(min_words * 0.8)
 
-        rewritten_text = rewritten_text.strip()
+    # 重试机制配置
+    MAX_RETRIES = 3
+    last_error = None
+    total_usage = None
 
-        # 如果生成内容为空，返回错误
-        if not rewritten_text:
-            logger.warning(f"AI 重写生成空内容: novel_id={request.novel_id}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="AI 生成了空内容，请重试",
+    for attempt in range(MAX_RETRIES):
+        try:
+            logger.info(
+                f"AI 重写尝试 {attempt + 1}/{MAX_RETRIES}: novel_id={request.novel_id}, "
+                f"user_id={current_user.id}, style={request.rewrite_style}, "
+                f"original_length={original_word_count}, target_range={min_words}-{max_words}"
             )
 
-        logger.info(
-            f"AI 重写完成: novel_id={request.novel_id}, "
-            f"original={len(request.original_text)}, rewritten={len(rewritten_text)}, "
-            f"tokens={usage.total_tokens}"
-        )
+            # 调用 AI 服务
+            rewritten_text, usage = await ai_service.generate(
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                max_tokens=original_word_count * 3,  # 预留足够空间（某些风格可能大幅扩写）
+                temperature=0.7,  # 中等温度，保持创意性
+                task="expand",  # 复用 expand 任务的模型配置
+            )
 
-        return RewriteResponse(
-            rewritten_text=rewritten_text,
-            original_word_count=len(request.original_text),
-            rewritten_word_count=len(rewritten_text),
-            usage=usage,
-        )
+            rewritten_text = rewritten_text.strip()
+            rewritten_word_count = len(rewritten_text)
 
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"AI 重写失败: {str(e)}", extra={"novel_id": request.novel_id})
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"AI重写失败: {str(e)}",
-        )
+            # 累计 token 使用量
+            if total_usage is None:
+                total_usage = usage
+            else:
+                total_usage = AIUsage(
+                    prompt_tokens=total_usage.prompt_tokens + usage.prompt_tokens,
+                    completion_tokens=total_usage.completion_tokens + usage.completion_tokens,
+                    total_tokens=total_usage.total_tokens + usage.total_tokens,
+                )
+
+            # 验证：检查是否为空
+            if not rewritten_text:
+                last_error = "AI 生成了空内容"
+                logger.warning(
+                    f"重写尝试 {attempt + 1} 失败: {last_error}, novel_id={request.novel_id}"
+                )
+                continue
+
+            # 验证：检查字数是否符合要求
+            if rewritten_word_count < validation_min:
+                last_error = f"输出字数 {rewritten_word_count} 低于最低要求 {validation_min}（目标范围 {min_words}-{max_words}）"
+                logger.warning(
+                    f"重写尝试 {attempt + 1} 失败: {last_error}, novel_id={request.novel_id}"
+                )
+                continue
+
+            # 验证通过
+            logger.info(
+                f"AI 重写成功: novel_id={request.novel_id}, "
+                f"original={original_word_count}, rewritten={rewritten_word_count}, "
+                f"attempts={attempt + 1}, total_tokens={total_usage.total_tokens}"
+            )
+
+            return RewriteResponse(
+                rewritten_text=rewritten_text,
+                original_word_count=original_word_count,
+                rewritten_word_count=rewritten_word_count,
+                usage=total_usage,
+            )
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            last_error = str(e)
+            logger.error(
+                f"重写尝试 {attempt + 1} 异常: {last_error}, novel_id={request.novel_id}"
+            )
+            if attempt == MAX_RETRIES - 1:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"AI重写失败: {last_error}",
+                )
+
+    # 所有重试都失败
+    logger.error(
+        f"AI 重写最终失败: novel_id={request.novel_id}, "
+        f"attempts={MAX_RETRIES}, last_error={last_error}"
+    )
+    raise HTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        detail=f"AI 重写失败（已重试 {MAX_RETRIES} 次）: {last_error}",
+    )
 # ========== 冒险游戏：AI生成端点 ==========
 
 

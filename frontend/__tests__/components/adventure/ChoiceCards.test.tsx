@@ -318,7 +318,7 @@ describe('ChoiceCards', () => {
       const onSelect = jest.fn();
       render(
         <ChoiceCards
-          choices={[mockChoices[1]]} // No potential_risk
+          choices={[{ ...mockChoices[1], potential_risk: '' }]} // No potential_risk
           onSelect={onSelect}
           playerState={mockPlayerState}
         />

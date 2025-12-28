@@ -47,6 +47,34 @@ def get_db():
         db.close()
 
 
+def _migrate_add_missing_columns():
+    """为已存在的表添加缺失的列（SQLite 迁移）"""
+    from sqlalchemy import text
+
+    migrations = [
+        # users 表新增列
+        ("users", "is_admin", "ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT 0"),
+        ("users", "is_active", "ALTER TABLE users ADD COLUMN is_active BOOLEAN DEFAULT 1"),
+        ("users", "deleted_at", "ALTER TABLE users ADD COLUMN deleted_at DATETIME"),
+        ("users", "last_login_at", "ALTER TABLE users ADD COLUMN last_login_at DATETIME"),
+        # novels 表新增列
+        ("novels", "deleted_at", "ALTER TABLE novels ADD COLUMN deleted_at DATETIME"),
+    ]
+
+    with engine.connect() as conn:
+        for table, column, sql in migrations:
+            # 检查列是否存在
+            result = conn.execute(text(f"PRAGMA table_info({table})"))
+            columns = [row[1] for row in result.fetchall()]
+            if column not in columns:
+                try:
+                    conn.execute(text(sql))
+                    conn.commit()
+                    print(f"[迁移] 已添加列: {table}.{column}")
+                except Exception as e:
+                    print(f"[迁移] 添加列 {table}.{column} 失败: {e}")
+
+
 def init_db():
     """
     初始化数据库表
@@ -61,6 +89,9 @@ def init_db():
         Adventure, StoryNode, PlayerChoice, AIConversation
     )
     Base.metadata.create_all(bind=engine)
+
+    # 迁移：为已存在的表添加缺失的列
+    _migrate_add_missing_columns()
 
     # 创建默认管理员账号（如果不存在）
     _create_default_admin()

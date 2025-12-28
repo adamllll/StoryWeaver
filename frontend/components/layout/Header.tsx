@@ -94,12 +94,12 @@ export function Header({ isHome = false }: HeaderProps) {
           </div>
         ) : (
           <div className="flex items-center gap-3">
-            <Link href="/auth/login">
+            <Link href="/login">
               <Button variant="ghost" size="sm" className="rounded-full px-5 text-gray-600 hover:text-gray-900 hover:bg-white/60">
                 登录
               </Button>
             </Link>
-            <Link href="/auth/register">
+            <Link href="/register">
               <Button size="sm" className="rounded-full px-6 bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 hover:scale-105 transition-all">
                 注册
               </Button>

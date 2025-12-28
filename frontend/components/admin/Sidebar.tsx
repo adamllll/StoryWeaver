@@ -11,7 +11,8 @@ import {
   Shield,
   LogOut,
   Home,
-  Gamepad2
+  Gamepad2,
+  Trash2
 } from "lucide-react";
 import { useAuthStore } from "@/lib/store";
 import { useRouter } from "next/navigation";
@@ -42,6 +43,11 @@ const sidebarItems = [
     href: "/admin/settings",
     icon: Settings,
   },
+  {
+    title: "回收站",
+    href: "/admin/recycle",
+    icon: Trash2,
+  },
 ];
 
 export function AdminSidebar() {
@@ -51,7 +57,7 @@ export function AdminSidebar() {
 
   const handleLogout = async () => {
     logout();
-    router.push("/auth/login");
+    router.push("/login");
   };
 
   return (

@@ -69,7 +69,7 @@ export default function HomePage() {
         description: `登录后即可使用「${featureName}」功能哦～`,
         variant: "default",
       });
-      router.push("/auth/login");
+      router.push("/login");
       return;
     }
     router.push(path);

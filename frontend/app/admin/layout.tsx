@@ -20,7 +20,7 @@ export default function AdminLayout({
     if (!isInitialized) return;
 
     if (!isAuthenticated) {
-      router.push("/auth/login?redirect=/admin");
+      router.push("/login?redirect=/admin");
       return;
     }
 

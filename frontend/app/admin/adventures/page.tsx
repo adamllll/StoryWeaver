@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { adminApi, adventureApi, AdminAdventure } from "@/lib/api";
+import { adminApi, AdminAdventure } from "@/lib/api";
 import {
   Table,
   TableBody,
@@ -88,11 +88,11 @@ export default function AdventuresPage() {
   const handleDeleteAdventure = async () => {
     if (!adventureToDelete) return;
     try {
-      await adventureApi.delete(adventureToDelete.id);
+      await adminApi.deleteAdventure(adventureToDelete.id);
       
       toast({
         title: "冒险记录已删除",
-        description: `《${adventureToDelete.title}》已移至回收站`,
+        description: `《${adventureToDelete.title}》已彻底删除`,
       });
       setAdventureToDelete(null);
       fetchAdventures();

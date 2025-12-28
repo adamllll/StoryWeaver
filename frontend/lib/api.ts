@@ -766,7 +766,7 @@ export const adminApi = {
   getStats: () => apiClient.get<AdminStats>("/admin/stats/overview"),
   
   // 用户管理
-  listUsers: (params?: { page?: number; page_size?: number; q?: string; is_active?: boolean }) =>
+  listUsers: (params?: { page?: number; page_size?: number; q?: string; is_active?: boolean; include_deleted?: boolean }) =>
     apiClient.get<{ users: AdminUser[]; total: number; page: number; page_size: number }>("/admin/users", params),
   
   getUser: (id: number) => apiClient.get<AdminUser>(`/admin/users/${id}`),
@@ -780,7 +780,7 @@ export const adminApi = {
   toggleUserStatus: (id: number, active: boolean) =>
     request<AdminUser>(`/admin/users/${id}/status`, { 
       method: "PATCH", 
-      body: JSON.stringify({ active }) 
+      body: JSON.stringify({ is_active: active }) 
     }),
 
   deleteUser: (id: number) => apiClient.delete(`/admin/users/${id}`),
@@ -788,7 +788,7 @@ export const adminApi = {
   restoreUser: (id: number) => apiClient.post(`/admin/users/${id}/restore`),
 
   // 内容管理
-  listNovels: (params?: { page?: number; page_size?: number; q?: string; status?: string }) =>
+  listNovels: (params?: { page?: number; page_size?: number; q?: string; status?: string; include_deleted?: boolean }) =>
     apiClient.get<{ novels: AdminNovel[]; total: number; page: number; page_size: number }>("/admin/novels", params),
 
   listAdventures: (params?: { page?: number; page_size?: number; q?: string }) =>
@@ -803,6 +803,9 @@ export const adminApi = {
   deleteNovel: (id: number) => apiClient.delete(`/admin/novels/${id}`),
   
   restoreNovel: (id: number) => apiClient.post(`/admin/novels/${id}/restore`),
+  
+  // 冒险管理
+  deleteAdventure: (id: number) => apiClient.delete(`/admin/adventures/${id}`),
 
   // 批量操作
   batchDeleteUsers: (ids: number[]) => apiClient.post("/admin/users/batch/delete", { user_ids: ids }),

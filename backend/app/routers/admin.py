@@ -1,4 +1,4 @@
-"""管理员路由 - 用户管理、内容管理、数据统计、ENV配置"""
+"管理员路由 - 用户管理、内容管理、数据统计、ENV配置"
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, or_
@@ -24,7 +24,7 @@ from ..utils.auth import get_admin_user
 router = APIRouter(prefix="/admin", tags=["管理员"])
 
 
-# ========== 辅助函数 ==========
+# ========== 辅助函数 ========== 
 def user_to_admin_response(user: User, db: Session) -> UserAdminResponse:
     """将 User 模型转换为管理员响应"""
     novel_count = db.query(func.count(Novel.id)).filter(
@@ -70,7 +70,7 @@ def novel_to_admin_response(novel: Novel) -> NovelAdminResponse:
     )
 
 
-# ========== 用户管理 API ==========
+# ========== 用户管理 API ========== 
 @router.get("/users", response_model=UserListResponse)
 async def list_users(
     page: int = Query(1, ge=1, description="页码"),
@@ -228,7 +228,7 @@ async def delete_user(
     return user_to_admin_response(user, db)
 
 
-# ========== 内容管理 API ==========
+# ========== 内容管理 API ========== 
 @router.get("/novels", response_model=NovelListAdminResponse)
 async def list_all_novels(
     page: int = Query(1, ge=1, description="页码"),
@@ -388,7 +388,22 @@ async def list_all_adventures(
     )
 
 
-# ========== 统计 API ==========
+@router.delete("/adventures/{adventure_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_adventure(
+    adventure_id: int,
+    admin: User = Depends(get_admin_user),
+    db: Session = Depends(get_db),
+):
+    """管理员删除冒险（物理删除）"""
+    adventure = db.query(Adventure).filter(Adventure.id == adventure_id).first()
+    if not adventure:
+        raise HTTPException(status_code=404, detail="冒险不存在")
+    
+    db.delete(adventure)
+    db.commit()
+
+
+# ========== 统计 API ========== 
 @router.get("/stats/overview", response_model=PlatformOverview)
 async def get_platform_overview(
     admin: User = Depends(get_admin_user),
@@ -565,7 +580,7 @@ async def get_content_stats(
     )
 
 
-# ========== ENV 配置管理 API ==========
+# ========== ENV 配置管理 API ========== 
 # 允许修改的配置项白名单（安全考虑）
 ALLOWED_ENV_KEYS = {
     "OPENAI_API_KEY": {"is_secret": True, "description": "OpenAI API 密钥"},
@@ -714,7 +729,7 @@ async def update_env_config(
     )
 
 
-# ========== 恢复已删除数据 API ==========
+# ========== 恢复已删除数据 API ========== 
 @router.post("/users/{user_id}/restore", response_model=UserAdminResponse)
 async def restore_user(
     user_id: int,
@@ -754,7 +769,7 @@ async def restore_novel(
     return novel_to_admin_response(novel)
 
 
-# ========== 批量操作 API ==========
+# ========== 批量操作 API ========== 
 @router.post("/users/batch/delete", response_model=BatchOperationResult)
 async def batch_delete_users(
     data: BatchUserIds,

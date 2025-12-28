@@ -213,7 +213,7 @@ export default function UsersPage() {
                   </TableCell>
                   <TableCell className="text-gray-500 text-sm">
                     {user.last_login_at
-                      ? formatDistanceToNow(new Date(user.last_login_at), { addSuffix: true, locale: zhCN })
+                      ? formatDistanceToNow(new Date(user.last_login_at.endsWith("Z") ? user.last_login_at : user.last_login_at + "Z"), { addSuffix: true, locale: zhCN })
                       : "从未登录"}
                   </TableCell>
                   <TableCell className="text-gray-500 text-sm">

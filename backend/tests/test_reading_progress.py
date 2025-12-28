@@ -1,6 +1,15 @@
 """阅读进度API测试"""
 import pytest
 from fastapi import status
+from app.models.chapter import Chapter
+
+
+@pytest.fixture(autouse=True)
+def clean_chapters(db, test_novel):
+    """每个测试前清理该小说的章节数据"""
+    db.query(Chapter).filter(Chapter.novel_id == test_novel.id).delete()
+    db.commit()
+    yield
 
 
 @pytest.mark.unit

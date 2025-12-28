@@ -882,7 +882,50 @@ STORY_NODE_SYSTEM_PROMPT = """你是一个互动小说的叙事者，负责根�
 - ❌ 不要输出开场白或解释性文字
 - ❌ 不要改变已确立的人物性格
 - ❌ 不要设计"假选择"或"送死选项"
-- ❌ 不要让主角轻易死亡（保持游戏性）"""
+- ❌ 不要让主角轻易死亡（保持游戏性）
+
+## ⚠️ JSON 输出格式(严格遵循)
+
+```json
+{
+    "content": "第一段内容，描写环境和主角状态。这是第一段的第二句话。\\n\\n第二段内容，事件展开。展开更多细节。\\n\\n第三段内容，结尾悬念。留下伏笔。",
+    "state_changes": {
+        "生命值": -20,
+        "灵力": -30,
+        "物品+": [
+            {
+                "name": "物品名称",
+                "count": 1,
+                "description": "物品描述"
+            }
+        ],
+        "故事事件+": ["事件描述1", "事件描述2"]
+    },
+    "choices": [
+        {
+            "index": 0,
+            "text": "选项文本",
+            "inner_monologue": "内心独白",
+            "success_rate": 0.7,
+            "difficulty": "简单",
+            "potential_reward": "潜在收益",
+            "potential_risk": "潜在风险",
+            "state_requirements": null
+        }
+    ]
+}
+```
+
+### 字段类型强制要求:
+- **content**: 字符串，800-1500字，Markdown格式
+- **state_changes**: 对象，包含状态变化
+  - 数值字段：整数或浮点数
+  - `物品+`: 对象数组，每个对象包含 name/count/description
+  - `故事事件+`: 字符串数组
+- **choices**: 数组，2-4个选项对象
+- 选项对象字段同开局生成
+
+**重要**: 直接输出JSON对象,不要任何其他内容!"""
 
 STORY_NODE_USER_TEMPLATE = """请生成故事的下一章节。
 
@@ -995,50 +1038,7 @@ STORY_NODE_USER_TEMPLATE = """请生成故事的下一章节。
 - **difficulty**: "简单"/"普通"/"困难"/"极限"
 - **potential_reward**: 20-30字
 - **potential_risk**: 20-30字
-- **state_requirements**: 前置条件（如 `{{"生命值": ">= 80"}}`）或 `null`
-
-## ⚠️ JSON 输出格式(严格遵循)
-
-```json
-{{
-    "content": "第一段内容，描写环境和主角状态。这是第一段的第二句话。\\n\\n第二段内容，事件展开。展开更多细节。\\n\\n第三段内容，结尾悬念。留下伏笔。",
-    "state_changes": {{
-        "生命值": -20,
-        "灵力": -30,
-        "物品+": [
-            {{
-                "name": "物品名称",
-                "count": 1,
-                "description": "物品描述"
-            }}
-        ],
-        "故事事件+": ["事件描述1", "事件描述2"]
-    }},
-    "choices": [
-        {{
-            "index": 0,
-            "text": "选项文本",
-            "inner_monologue": "内心独白",
-            "success_rate": 0.7,
-            "difficulty": "简单",
-            "potential_reward": "潜在收益",
-            "potential_risk": "潜在风险",
-            "state_requirements": null
-        }}
-    ]
-}}
-```
-
-### 字段类型强制要求:
-- **content**: 字符串，800-1500字，Markdown格式
-- **state_changes**: 对象，包含状态变化
-  - 数值字段：整数或浮点数
-  - `物品+`: 对象数组，每个对象包含 name/count/description
-  - `故事事件+`: 字符串数组
-- **choices**: 数组，2-4个选项对象
-- 选项对象字段同开局生成
-
-**重要**: 直接输出JSON对象,不要任何其他内容!"""
+- **state_requirements**: 前置条件（如 `{{"生命值": ">= 80"}}`）或 `null`"""
 
 
 def get_story_node_prompt(

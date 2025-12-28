@@ -21,6 +21,7 @@ from .routers import (
     adventures_router,
     conversations_router,
     dev_router,
+    admin_router,
 )
 
 
@@ -121,6 +122,7 @@ app.include_router(characters_router, prefix="/api")
 app.include_router(reading_progress_router, prefix="/api")
 app.include_router(adventures_router, prefix="/api")  # 新增：冒险游戏 API
 app.include_router(conversations_router, prefix="/api")  # 新增：对话历史 API
+app.include_router(admin_router, prefix="/api")  # 新增：管理员 API
 
 # 开发调试路由（仅在DEBUG模式下可用）
 if settings.DEBUG:

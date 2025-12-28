@@ -61,3 +61,42 @@ def init_db():
         Adventure, StoryNode, PlayerChoice, AIConversation
     )
     Base.metadata.create_all(bind=engine)
+
+    # 创建默认管理员账号（如果不存在）
+    _create_default_admin()
+
+
+def _create_default_admin():
+    """创建默认管理员账号"""
+    from .models import User
+    from .utils.security import hash_password
+    import os
+
+    # 从环境变量读取管理员配置，或使用默认值
+    admin_username = os.getenv("ADMIN_USERNAME", "admin")
+    admin_email = os.getenv("ADMIN_EMAIL", "admin@example.com")
+    admin_password = os.getenv("ADMIN_PASSWORD", "admin123")
+
+    db = SessionLocal()
+    try:
+        # 检查管理员是否已存在
+        existing = db.query(User).filter(User.username == admin_username).first()
+        if not existing:
+            admin = User(
+                username=admin_username,
+                email=admin_email,
+                password_hash=hash_password(admin_password),
+                is_admin=True,
+                is_active=True,
+            )
+            db.add(admin)
+            db.commit()
+            print(f"[OK] 默认管理员已创建: {admin_username}")
+        else:
+            # 确保已存在的用户是管理员
+            if not existing.is_admin:
+                existing.is_admin = True
+                db.commit()
+                print(f"[OK] 已将 {admin_username} 设为管理员")
+    finally:
+        db.close()

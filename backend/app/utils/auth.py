@@ -109,7 +109,44 @@ async def get_current_user(
             detail="用户不存在",
         )
 
+    # 检查用户是否被软删除
+    if user.deleted_at is not None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="账户已被删除",
+        )
+
+    # 检查用户是否被禁用
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="账户已被禁用",
+        )
+
     return user
+
+
+async def get_admin_user(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    """
+    依赖注入：获取当前管理员用户
+
+    参数:
+        current_user: 当前已认证的用户
+
+    返回:
+        已认证的管理员用户对象
+
+    异常:
+        HTTPException: 非管理员时抛出 403
+    """
+    if not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="需要管理员权限",
+        )
+    return current_user
 
 
 async def get_optional_user(

@@ -1,6 +1,15 @@
 """小说API测试"""
 import pytest
 from fastapi import status
+from app.models.novel import Novel
+
+
+@pytest.fixture(autouse=True)
+def clean_novels(db):
+    """每个测试前清理小说数据"""
+    db.query(Novel).delete()
+    db.commit()
+    yield
 
 
 @pytest.mark.unit

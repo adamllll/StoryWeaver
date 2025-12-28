@@ -26,7 +26,7 @@ const config: Config = {
 
   // Transform ESM modules
   transformIgnorePatterns: [
-    '/node_modules/(?!(marked|isomorphic-dompurify)/)',
+    '/node_modules/(?!(marked|isomorphic-dompurify|remark-gfm|micromark.*|mdast.*|unist.*|unified|bail|is-plain-obj|trough|vfile.*|property-information|hast-util.*|space-separated-tokens|comma-separated-tokens|ccount|escape-string-regexp|markdown-table|zwitch|longest-streak|devlop)/)',
   ],
 
   // Test match patterns

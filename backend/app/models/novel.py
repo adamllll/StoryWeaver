@@ -22,6 +22,7 @@ class Novel(Base):
     is_interactive = Column(Boolean, default=False)  # 是否互动小说
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    deleted_at = Column(DateTime, nullable=True)  # 软删除时间戳
 
     # P3 可玩性拓展字段（预留）
     total_endings = Column(Integer, default=1)

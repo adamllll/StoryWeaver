@@ -100,12 +100,30 @@ async def login(credentials: UserLogin, db: Session = Depends(get_db)):
             detail="邮箱或密码错误",
         )
 
+    # 检查用户是否被软删除
+    if user.deleted_at is not None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="账户已被删除",
+        )
+
+    # 检查用户是否被禁用
+    if user.is_active is False:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="账户已被禁用",
+        )
+
     # 验证密码
     if not verify_password(credentials.password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="邮箱或密码错误",
         )
+
+    # 更新最后登录时间
+    user.last_login_at = datetime.utcnow()
+    db.commit()
 
     # 生成令牌（根据记住我选项设置有效期）
     token = create_token(user.id, credentials.remember_me)
@@ -138,6 +156,7 @@ async def get_me(current_user: User = Depends(get_current_user)):
         email=current_user.email,
         avatar=current_user.avatar,
         bio=current_user.bio,
+        is_admin=current_user.is_admin,
         created_at=current_user.created_at,
     )
 

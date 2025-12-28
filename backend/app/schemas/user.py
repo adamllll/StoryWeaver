@@ -31,6 +31,7 @@ class UserResponse(UserBase):
     id: int
     avatar: Optional[str] = None
     bio: Optional[str] = None
+    is_admin: bool = False
     created_at: datetime
 
     class Config:

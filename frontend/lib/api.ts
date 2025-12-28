@@ -164,6 +164,7 @@ export interface User {
   email: string;
   avatar?: string;
   bio?: string;
+  is_admin?: boolean;
   created_at: string;
 }
 
@@ -738,3 +739,119 @@ export const conversationsApi = {
   linkToAdventure: (conversationId: number, adventureId: number) =>
     apiClient.post(`/conversations/${conversationId}/link/${adventureId}`, {}),
 };
+
+// ============================================
+// 管理员 API
+// ============================================
+
+export interface AdminUser extends User {
+  is_active: boolean;
+  // is_admin 已经在 User 接口里定义了，这里不需要重复，或者如果必须明确，可以保留
+  last_login_at?: string;
+  deleted_at?: string;
+}
+
+export interface AdminStats {
+  total_users: number;
+  active_users_24h: number;
+  total_novels: number;
+  total_chapters: number;
+  total_words: number;
+  total_adventures: number;
+  active_adventures_24h: number;
+}
+
+export const adminApi = {
+  // 统计信息
+  getStats: () => apiClient.get<AdminStats>("/admin/stats/overview"),
+  
+  // 用户管理
+  listUsers: (params?: { page?: number; page_size?: number; q?: string; is_active?: boolean }) =>
+    apiClient.get<{ users: AdminUser[]; total: number; page: number; page_size: number }>("/admin/users", params),
+  
+  getUser: (id: number) => apiClient.get<AdminUser>(`/admin/users/${id}`),
+  
+  toggleSuperuser: (id: number, is_admin: boolean) =>
+    request<AdminUser>(`/admin/users/${id}/admin`, { 
+      method: "PATCH", 
+      body: JSON.stringify({ is_admin }) 
+    }),
+
+  toggleUserStatus: (id: number, active: boolean) =>
+    request<AdminUser>(`/admin/users/${id}/status`, { 
+      method: "PATCH", 
+      body: JSON.stringify({ active }) 
+    }),
+
+  deleteUser: (id: number) => apiClient.delete(`/admin/users/${id}`),
+  
+  restoreUser: (id: number) => apiClient.post(`/admin/users/${id}/restore`),
+
+  // 内容管理
+  listNovels: (params?: { page?: number; page_size?: number; q?: string; status?: string }) =>
+    apiClient.get<{ novels: AdminNovel[]; total: number; page: number; page_size: number }>("/admin/novels", params),
+
+  listAdventures: (params?: { page?: number; page_size?: number; q?: string }) =>
+    apiClient.get<{ adventures: AdminAdventure[]; total: number; page: number; page_size: number }>("/admin/adventures", params),
+
+  updateNovelStatus: (id: number, status: string) =>
+    request<Novel>(`/admin/novels/${id}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ status })
+    }),
+
+  deleteNovel: (id: number) => apiClient.delete(`/admin/novels/${id}`),
+  
+  restoreNovel: (id: number) => apiClient.post(`/admin/novels/${id}/restore`),
+
+  // 批量操作
+  batchDeleteUsers: (ids: number[]) => apiClient.post("/admin/users/batch/delete", { user_ids: ids }),
+  batchDisableUsers: (ids: number[]) => apiClient.post("/admin/users/batch/disable", { user_ids: ids }),
+  batchDeleteNovels: (ids: number[]) => apiClient.post("/admin/novels/batch/delete", { novel_ids: ids }),
+
+  // 系统配置
+  getEnv: () => apiClient.get<{ items: EnvConfigItem[]; env_file_path: string }>("/admin/env"),
+  updateEnv: (key: string, value: string) => 
+    request<EnvConfigItem>("/admin/env", {
+      method: "PATCH",
+      body: JSON.stringify({ key, value })
+    }),
+};
+
+export interface EnvConfigItem {
+  key: string;
+  value: string;
+  is_secret: boolean;
+  description: string;
+}
+
+export interface AdminNovel {
+  id: number;
+  title: string;
+  description?: string;
+  category: string;
+  status: string;
+  is_interactive: boolean;
+  chapter_count: number;
+  word_count: number;
+  author_id: number;
+  author_username: string;
+  created_at: string;
+  updated_at: string;
+  deleted_at?: string;
+  cover_url?: string;
+}
+
+export interface AdminAdventure {
+  id: number;
+  title: string;
+  category: string;
+  protagonist_name: string;
+  is_finished: boolean;
+  total_nodes: number;
+  total_words: number;
+  player_id: number;
+  player_username: string;
+  created_at: string;
+  updated_at: string;
+}

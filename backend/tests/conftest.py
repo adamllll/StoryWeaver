@@ -24,7 +24,8 @@ from app.routers import (
     characters_router,
     reading_progress_router,
     adventures_router,
-    conversations_router
+    conversations_router,
+    admin_router
 )
 
 
@@ -63,6 +64,7 @@ def test_app():
     app.include_router(reading_progress_router, prefix="/api")
     app.include_router(adventures_router, prefix="/api")
     app.include_router(conversations_router, prefix="/api")
+    app.include_router(admin_router, prefix="/api")
     app.dependency_overrides[get_db] = override_get_db
     return app
 
@@ -453,3 +455,34 @@ def test_conversation(db, test_adventure):
     db.commit()
     db.refresh(conversation)
     return conversation
+
+
+# ========== 管理员相关 Fixtures ==========
+@pytest.fixture
+def admin_user(db):
+    """创建管理员用户"""
+    import uuid
+    unique_id = str(uuid.uuid4())[:8]
+    user = User(
+        username=f"admin_{unique_id}",
+        email=f"admin_{unique_id}@example.com",
+        password_hash=hash_password("admin123"),
+        is_admin=True,
+        is_active=True
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+@pytest.fixture
+def admin_token(admin_user):
+    """生成管理员认证令牌"""
+    return create_token(admin_user.id)
+
+
+@pytest.fixture
+def admin_headers(admin_token):
+    """生成管理员认证请求头"""
+    return {"Authorization": f"Bearer {admin_token}"}

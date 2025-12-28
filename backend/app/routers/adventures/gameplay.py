@@ -221,7 +221,8 @@ async def make_choice(
     except Exception as e:
         logger.error(f"AI 故事节点生成失败: adventure_id={adventure_id}, error={str(e)}")
         # 使用默认内容
-        new_content = f"【{request.choice_text}】\n\n{'判定成功！' if success else '判定失败...'}\n\n（投骰 {roll_value} / 目标 {target}）\n\n故事继续发展中..."
+        error_msg = str(e)
+        new_content = f"【{request.choice_text}】\n\n{'判定成功！' if success else '判定失败...'}\n\n（投骰 {roll_value} / 目标 {target}）\n\n⚠️ 系统错误：{error_msg}\n\n故事继续发展中..."
         state_delta = {"生命值": 10 if success else -20}
         new_choices = [
             {
@@ -393,7 +394,7 @@ async def finish_adventure(
                 system_prompt=system_prompt,
                 user_prompt=user_prompt,
                 temperature=0.7,
-                max_tokens=2500,
+                max_tokens=4000,
             )
 
             # 创建结局节点

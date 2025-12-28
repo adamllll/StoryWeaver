@@ -18,10 +18,14 @@ jest.mock('@/lib/api', () => ({
 // Mock 数据
 const mockAdventure: Adventure = {
   id: 1,
+  player_id: 1,
   title: '测试冒险',
-  genre: '玄幻',
+  category: '玄幻',
+  keywords: ['修仙'],
   protagonist_name: '叶无痕',
-  status: 'active',
+  protagonist_gender: 'male',
+  protagonist_personality: '冷静',
+  current_node_id: 1,
   player_state: {
     生命值: 100,
     最大生命值: 100,
@@ -30,17 +34,24 @@ const mockAdventure: Adventure = {
     故事事件: [],
     关系网: {},
   },
+  is_finished: false,
+  final_ending: null,
   total_nodes: 5,
   total_choices: 10,
   total_words: 5000,
   created_at: '2025-01-01T00:00:00Z',
   updated_at: '2025-01-01T00:00:00Z',
+  finished_at: null,
 };
 
 const mockNode: StoryNode = {
   id: 1,
   adventure_id: 1,
+  chapter_num: 1,
+  title: '第一章',
   content: '你站在一个神秘的洞穴入口前...',
+  state_before: mockAdventure.player_state,
+  state_after: mockAdventure.player_state,
   choices: [
     {
       index: 0,
@@ -63,25 +74,23 @@ const mockNode: StoryNode = {
       state_requirements: null,
     },
   ],
-  is_ending: false,
   created_at: '2025-01-01T00:00:00Z',
 };
 
 const mockChoiceResponse: ChoiceResponse = {
   success: true,
-  roll_result: {
-    base_success_rate: 0.8,
-    modifiers: [],
-    final_success_rate: 0.8,
-    roll_value: 0.5,
-    is_success: true,
-  },
-  narrative: '你成功进入了洞穴...',
-  state_changes: { 生命值: -10 },
+  roll_value: 0.5,
+  target: 0.8,
   state_after: {
     生命值: 90,
     最大生命值: 100,
-    物品: ['神秘钥匙'],
+    物品: [
+      {
+        name: '神秘钥匙',
+        count: 1,
+        description: '一把散发微光的钥匙',
+      },
+    ],
     关键属性: { 力量: 10, 敏捷: 8 },
     故事事件: ['进入洞穴'],
     关系网: {},
@@ -89,11 +98,16 @@ const mockChoiceResponse: ChoiceResponse = {
   new_node: {
     id: 2,
     adventure_id: 1,
+    chapter_num: 2,
+    title: '第二章',
     content: '洞穴内部漆黑一片...',
+    state_before: mockAdventure.player_state,
+    state_after: mockAdventure.player_state,
     choices: [],
-    is_ending: false,
     created_at: '2025-01-01T00:00:00Z',
   },
+  game_over: false,
+  game_over_reason: null,
 };
 
 describe('useAdventureStore', () => {

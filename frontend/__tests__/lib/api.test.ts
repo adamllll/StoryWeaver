@@ -184,7 +184,7 @@ describe('authApi', () => {
 
   it('should login user successfully', async () => {
     const loginData = {
-      username: 'testuser',
+      email: 'test@example.com',
       password: 'password123',
       remember_me: false,
     };

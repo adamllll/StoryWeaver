@@ -205,8 +205,32 @@ def reset_rate_limiter():
 @pytest.fixture
 def mock_ai_service(monkeypatch):
     """Mock AI服务"""
+    def build_long_text(target_length: int) -> str:
+        sentence = "这是测试内容。"
+        repeat = max(1, int(target_length / len(sentence)) + 2)
+        return sentence * repeat
+
+    def extract_target_length(prompt: str) -> int:
+        import re
+
+        match = re.search(r"目标字数[:：]\s*(\d+)", prompt)
+        if match:
+            return int(match.group(1))
+
+        match = re.search(r"最低字数[:：]\s*(\d+)", prompt)
+        if match:
+            return int(match.group(1))
+
+        return 2000
+
     async def mock_generate(system_prompt, user_prompt, max_tokens=4000, temperature=0.7, task=None):
-        return "AI生成的内容", AIUsage(prompt_tokens=100, completion_tokens=200, total_tokens=300)
+        target_length = extract_target_length(user_prompt)
+        body = build_long_text(target_length)
+        if "章节标题" in user_prompt or "续写" in user_prompt or "章节" in user_prompt:
+            content = f"# 第一章 测试标题\n\n{body}"
+        else:
+            content = body
+        return content, AIUsage(prompt_tokens=100, completion_tokens=200, total_tokens=300)
 
     # 用于存储请求的 role_type
     request_context = {}

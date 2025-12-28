@@ -48,7 +48,7 @@ const mockChoices: Choice[] = [
     success_rate: 1.0,
     difficulty: '简单',
     potential_reward: '安全通过',
-    potential_risk: null,
+    potential_risk: '无',
     state_requirements: null,
   },
   {

@@ -175,7 +175,7 @@ describe('useAutoSave', () => {
   });
 
   it('should manually save when requested', async () => {
-    (chaptersApi.update as jest.Mock).mockResolvedValue();
+    (chaptersApi.update as jest.Mock).mockResolvedValue(undefined);
 
     const { result, rerender } = renderHook(
       ({ content }) =>

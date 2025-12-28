@@ -33,6 +33,10 @@ const nextConfig = {
       },
     ],
   },
+
+  experimental: {
+    serverComponentsExternalPackages: ["isomorphic-dompurify", "jsdom"],
+  },
 };
 
 module.exports = nextConfig;

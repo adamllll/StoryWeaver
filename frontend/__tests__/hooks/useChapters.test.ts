@@ -42,10 +42,10 @@ const mockChapter: Chapter = {
   content: 'Content 1',
   order_num: 1,
   is_branch: false,
-  parent_chapter_id: null,
   word_count: 100,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
+  navigation: {},
 };
 
 describe('useChapters', () => {

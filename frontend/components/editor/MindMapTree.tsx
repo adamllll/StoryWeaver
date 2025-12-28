@@ -29,7 +29,7 @@ interface MindMapTreeProps {
   onChapterClick: (chapterId: number) => void;
 }
 
-interface ChapterNodeData {
+interface ChapterNodeData extends Record<string, unknown> {
   chapter: ChapterSummary;
   isActive: boolean;
   onClick: (chapterId: number) => void;
@@ -118,7 +118,7 @@ export function MindMapTree({
   const { nodes: initialNodes, edges: initialEdges } = useMemo(() => {
     // 按层级组织章节
     const rootChapters = chapters.filter((c) => !c.parent_chapter_id);
-    const nodes: Node[] = [];
+    const nodes: Node<ChapterNodeData>[] = [];
     const edges: Edge[] = [];
 
     // 递归构建节点
@@ -183,7 +183,9 @@ export function MindMapTree({
     return { nodes, edges };
   }, [chapters, currentChapterId, onChapterClick]);
 
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+  const [nodes, setNodes, onNodesChange] = useNodesState<
+    Node<ChapterNodeData>
+  >(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
   // 更新节点状态
@@ -194,7 +196,7 @@ export function MindMapTree({
 
   // 自动居中到当前章节
   const onInit = useCallback(
-    (reactFlowInstance: ReactFlowInstance) => {
+    (reactFlowInstance: ReactFlowInstance<Node<ChapterNodeData>, Edge>) => {
       if (currentChapterId) {
         const node = nodes.find((n) => n.id === String(currentChapterId));
         if (node) {
@@ -227,7 +229,7 @@ export function MindMapTree({
 
   return (
     <div className="h-[calc(100vh-12rem)] glass rounded-2xl overflow-hidden">
-      <ReactFlow
+      <ReactFlow<Node<ChapterNodeData>, Edge>
         nodes={nodes}
         edges={edges}
         onNodesChange={onNodesChange}
@@ -246,9 +248,11 @@ export function MindMapTree({
           className="bg-white/80 backdrop-blur-sm rounded-xl border border-gray-200 shadow-lg"
         />
         <MiniMap
-          nodeColor={(node: Node<ChapterNodeData>) => {
-            if (node.data.isActive) return "#a855f7";
-            if (node.data.chapter.is_branch) return "#f59e0b";
+          nodeColor={(node) => {
+            const data = node.data as unknown as ChapterNodeData | undefined;
+            if (!data) return "#e5e7eb";
+            if (data.isActive) return "#a855f7";
+            if (data.chapter?.is_branch) return "#f59e0b";
             return "#e5e7eb";
           }}
           className="bg-white/80 backdrop-blur-sm rounded-xl border border-gray-200 shadow-lg"

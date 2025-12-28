@@ -463,7 +463,7 @@ export default function NovelWorkspacePage() {
 
         {/* === 右侧栏：AI 助手 === */}
         <aside className="border-l border-gray-200/60 bg-white/60 backdrop-blur-xl h-full overflow-hidden relative">
-          <div className="w-[320px] h-full overflow-y-auto custom-scrollbar">
+          <div className="w-[320px] h-full overflow-hidden">
             <AIAssistant
               novelId={novelId}
               currentChapter={currentChapter}

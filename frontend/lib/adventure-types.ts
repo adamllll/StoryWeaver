@@ -19,6 +19,23 @@ export interface Adventure {
   finished_at: string | null;
 }
 
+export interface ForkPoint {
+  node_id: number;
+  chapter_num: number;
+  title: string;
+  preview: string;
+  state_after: PlayerState;
+  has_choices: boolean;
+  word_count: number;
+}
+
+export interface ForkPointsResponse {
+  adventure_id: number;
+  adventure_title: string;
+  total_nodes: number;
+  fork_points: ForkPoint[];
+}
+
 export interface StoryNode {
   id: number;
   adventure_id: number;

@@ -2,19 +2,19 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAdventureStore } from "@/lib/adventure-store";
 import { apiClient } from "@/lib/api";
 import { StoryNode, Choice } from "@/lib/adventure-types";
 import { PlayerStatePanel } from "@/components/adventure/PlayerStatePanel";
 import { StoryDisplay } from "@/components/adventure/StoryDisplay";
-import { ChoiceCards } from "@/components/adventure/ChoiceCards";
+import { ChoiceModal } from "@/components/adventure/ChoiceModal";
 import { DiceRollAnimation } from "@/components/adventure/DiceRollAnimation";
 import { ChapterSidebar } from "@/components/adventure/ChapterSidebar";
-import { EndAdventureButton } from "@/components/adventure/EndAdventureButton";
 import { GameEndDialog } from "@/components/adventure/GameEndDialog";
 import { Button } from "@/components/ui/button";
-import { Menu, X, BookText } from "lucide-react";
+import { X, BookText, Sparkles, User, List, ArrowLeft } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 
 // ------------------------------------------------------------------
@@ -43,13 +43,13 @@ export default function AdventurePlayPage() {
   const [statePanelOpen, setStatePanelOpen] = useState(false);
   const [nodes, setNodes] = useState<StoryNode[]>([]);
   const [viewingNode, setViewingNode] = useState<StoryNode | null>(null);
+  const [isChoiceModalOpen, setIsChoiceModalOpen] = useState(false);
 
   // Initialize
   useEffect(() => {
     if (adventureId) {
       loadAdventure(adventureId)
         .then(() => {
-           // Also fetch all nodes for the history list
            return apiClient.get<StoryNode[]>(`/adventures/${adventureId}/nodes`);
         })
         .then((fetchedNodes) => {
@@ -66,27 +66,22 @@ export default function AdventurePlayPage() {
     return () => reset();
   }, [adventureId, loadAdventure, reset, toast]);
 
-  // Sync viewing node with current node initially, or when new node arrives
+  // Sync viewing node
   useEffect(() => {
     if (storeCurrentNode) {
       setViewingNode(storeCurrentNode);
-
-      // ✅ 简化：currentNode变化就刷新，删除复杂条件
       apiClient.get<StoryNode[]>(`/adventures/${adventureId}/nodes`)
         .then(fetchedNodes => {
-          // 强制按chapter_num排序
           const sorted = [...fetchedNodes].sort((a, b) => a.chapter_num - b.chapter_num);
           setNodes(sorted);
         })
-        .catch(err => {
-          console.error('Failed to refresh nodes:', err);
-          // 静默失败，不影响主流程
-        });
+        .catch(err => console.error('Failed to refresh nodes:', err));
     }
   }, [storeCurrentNode, adventureId]);
 
   // Handlers
   const handleChoice = async (choice: Choice) => {
+    setIsChoiceModalOpen(false);
     try {
       await makeChoice(choice);
     } catch (err: unknown) {
@@ -100,10 +95,6 @@ export default function AdventurePlayPage() {
   };
 
   const handleAnimationComplete = () => {
-    // The store updates state after a timeout, 
-    // but the animation component calls this when it's visually done.
-    // We can rely on the store's reactive state update to refresh the UI.
-    // Maybe we just ensure we re-fetch the node list here to be safe
     apiClient.get<StoryNode[]>(`/adventures/${adventureId}/nodes`).then(setNodes);
   };
 
@@ -121,7 +112,7 @@ export default function AdventurePlayPage() {
   // 加载状态
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-ios-bg">
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin" />
           <p className="text-gray-500 font-medium">正在加载冒险...</p>
@@ -133,7 +124,7 @@ export default function AdventurePlayPage() {
   // 冒险不存在
   if (!currentAdventure) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-ios-bg">
         <div className="flex flex-col items-center gap-4 text-center px-4">
           <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center">
             <span className="text-2xl">❌</span>
@@ -148,10 +139,10 @@ export default function AdventurePlayPage() {
     );
   }
 
-  // 冒险存在但没有节点（正在生成中）
+  // 正在生成
   if (!viewingNode) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-ios-bg">
         <div className="flex flex-col items-center gap-4 text-center px-4">
           <div className="w-12 h-12 border-4 border-amber-200 border-t-amber-600 rounded-full animate-spin" />
           <h2 className="text-lg font-bold text-gray-800">正在生成开局...</h2>
@@ -162,54 +153,46 @@ export default function AdventurePlayPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F2F2F7] text-gray-900 font-sans selection:bg-purple-200 selection:text-purple-900 overflow-hidden flex">
+    <div className="min-h-screen bg-[#F2F2F7] text-gray-900 font-sans selection:bg-purple-200 selection:text-purple-900 overflow-hidden flex flex-col relative">
       
       {/* ------------------------------------------------------------------
-          Left Sidebar (Desktop): Player State
+          Main Content Area (Zen Mode)
           ------------------------------------------------------------------ */}
-      <motion.aside 
-        initial={{ x: -300, opacity: 0 }}
-        animate={{ x: 0, opacity: 1 }}
-        transition={{ duration: 0.5, delay: 0.2 }}
-        className="hidden lg:block w-[320px] h-screen sticky top-0 p-6 pr-0"
-      >
-        <PlayerStatePanel 
-          state={currentAdventure.player_state} 
-          protagonist={currentAdventure.protagonist_name}
-        />
-      </motion.aside>
-
-      {/* ------------------------------------------------------------------
-          Main Content Area
-          ------------------------------------------------------------------ */}
-      <main className="flex-1 h-screen overflow-y-auto relative scroll-smooth">
-        {/* Mobile Header */}
-        <div className="lg:hidden sticky top-0 z-40 px-4 py-3 bg-white/80 backdrop-blur-md border-b border-gray-200 flex justify-between items-center">
-          <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)}>
-            <Menu className="w-5 h-5" />
-          </Button>
-          <span className="font-bold text-gray-800 truncate max-w-[150px]">
-            {currentAdventure.title}
-          </span>
-          <Button variant="ghost" size="icon" onClick={() => setStatePanelOpen(true)}>
-            <span className="sr-only">状态</span>
-            <div className="w-8 h-8 rounded-full bg-gray-200 overflow-hidden border border-gray-300">
-               {/* Avatar placeholder */}
-               <div className="w-full h-full bg-gradient-to-br from-purple-400 to-blue-500" />
-            </div>
-          </Button>
-        </div>
-
-        <div className="max-w-4xl mx-auto px-4 py-8 lg:py-12 pb-32">
+      <main className="flex-1 h-screen overflow-y-auto relative scroll-smooth pb-32">
+        <div className="max-w-4xl mx-auto px-4 py-8 lg:py-12">
+          
+          {/* Top Navigation Bar */}
+          <div className="flex items-center justify-between mb-8">
+            <Link href="/adventures">
+              <Button variant="ghost" size="sm" className="text-gray-500 hover:text-gray-900 hover:bg-white/50">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                返回列表
+              </Button>
+            </Link>
+            
+            {/* End Game Trigger (Only visible if not finished) */}
+            {!currentAdventure?.is_finished && (
+               <Button 
+                 variant="ghost" 
+                 size="sm" 
+                 onClick={() => setShowEndDialog(true)}
+                 className="text-red-400 hover:text-red-600 hover:bg-red-50"
+               >
+                 提前结局
+               </Button>
+            )}
+          </div>
           
           {/* Header Info */}
           <motion.div
             initial={{ y: -20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            className="text-center mb-10"
+            className="text-center mb-16"
           >
-            {/* 只显示一个标题，避免重复 */}
-            <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900 tracking-tight">
+            <span className="inline-block px-3 py-1 rounded-full bg-purple-100 text-purple-700 text-xs font-bold mb-3 tracking-wide uppercase">
+              {currentAdventure.title}
+            </span>
+            <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight font-serif">
               {viewingNode.title || `第 ${viewingNode.chapter_num} 章`}
             </h1>
           </motion.div>
@@ -220,57 +203,14 @@ export default function AdventurePlayPage() {
             background={viewingNode.chapter_num === 1 ? currentAdventure.keywords[0] : undefined}
           />
 
-          {/* Choices Area */}
-          <div className="min-h-[200px]">
+          {/* Inline History Indicators */}
+          <div className="min-h-[100px] flex justify-center">
             <AnimatePresence mode="wait">
-              {isRolling && rollResult ? (
-                <DiceRollAnimation
-                  key="dice"
-                  rollValue={rollResult.roll_value}
-                  target={rollResult.target}
-                  success={rollResult.success}
-                  onComplete={handleAnimationComplete}
-                />
-              ) : isRolling && !rollResult ? (
-                // API 调用中的加载提示
-                <motion.div
-                  key="loading"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="fixed inset-0 z-50 flex items-center justify-center bg-white/60 backdrop-blur-md"
-                >
-                  <div className="flex flex-col items-center gap-4">
-                    <div className="w-16 h-16 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin" />
-                    <p className="text-gray-600 font-medium text-lg">正在处理您的选择...</p>
-                    <p className="text-gray-400 text-sm">AI 正在生成后续剧情</p>
-                  </div>
-                </motion.div>
-              ) : showChoices ? (
-                <div className="space-y-6">
-                  <div className="flex items-center gap-4 py-4">
-                    <div className="h-px flex-1 bg-gradient-to-r from-transparent via-gray-300 to-transparent" />
-                    <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">做出抉择</span>
-                    <div className="h-px flex-1 bg-gradient-to-r from-transparent via-gray-300 to-transparent" />
-                  </div>
-                  <ChoiceCards
-                    choices={viewingNode.choices}
-                    onSelect={handleChoice}
-                    playerState={currentAdventure.player_state}
-                    disabled={isRolling}
-                  />
-
-                  {/* 结束冒险按钮 */}
-                  <EndAdventureButton
-                    adventureId={adventureId}
-                    disabled={isRolling}
-                  />
-                </div>
-              ) : !isLatest ? (
-                <div className="text-center py-12 text-gray-400 bg-gray-50/50 rounded-2xl border border-dashed border-gray-200">
-                  <BookText className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                  <p>正在查看历史章节</p>
-                  <Button variant="link" onClick={() => handleNodeSelect(nodes[nodes.length - 1])}>
+              {!isLatest ? (
+                <div className="text-center py-8 text-gray-400">
+                  <BookText className="w-6 h-6 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">正在回溯历史</p>
+                  <Button variant="link" onClick={() => handleNodeSelect(nodes[nodes.length - 1])} className="text-purple-600">
                     回到最新进度
                   </Button>
                 </div>
@@ -281,40 +221,112 @@ export default function AdventurePlayPage() {
       </main>
 
       {/* ------------------------------------------------------------------
-          Right Sidebar (Desktop): Chapter List
+          Global Overlays (Root Level)
           ------------------------------------------------------------------ */}
-      <motion.aside 
-        initial={{ x: 300, opacity: 0 }}
-        animate={{ x: 0, opacity: 1 }}
-        transition={{ duration: 0.5, delay: 0.2 }}
-        className="hidden lg:block w-[280px] h-screen sticky top-0"
-      >
-        <ChapterSidebar 
-          nodes={nodes} 
-          currentNodeId={viewingNode.id}
-          onSelect={handleNodeSelect}
-        />
-      </motion.aside>
+
+      {/* AI Generation Overlay (Loading) */}
+      <AnimatePresence>
+        {isRolling && !rollResult && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-white/80 backdrop-blur-md"
+          >
+            <div className="flex flex-col items-center gap-6">
+              <div className="relative">
+                <div className="w-20 h-20 border-4 border-purple-100 border-t-purple-600 rounded-full animate-spin" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <Sparkles className="w-8 h-8 text-purple-600 animate-pulse" />
+                </div>
+              </div>
+              <div className="text-center">
+                <h3 className="text-xl font-bold text-gray-900 mb-1">命运推演中...</h3>
+                <p className="text-gray-500">AI 正在编织你的未来</p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Dice Roll Overlay */}
+      <AnimatePresence>
+        {isRolling && rollResult && (
+          <DiceRollAnimation
+            key="dice"
+            rollValue={rollResult.roll_value}
+            target={rollResult.target}
+            success={rollResult.success}
+            onComplete={handleAnimationComplete}
+          />
+        )}
+      </AnimatePresence>
 
       {/* ------------------------------------------------------------------
-          Mobile Drawers (Overlays)
+          Floating Control Dock (Bottom Center)
+          ------------------------------------------------------------------ */}
+      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-40 flex items-center gap-4">
+        {/* Menu Toggle */}
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => setSidebarOpen(true)}
+          className="w-12 h-12 rounded-full glass flex items-center justify-center text-gray-600 shadow-ios-float hover:text-purple-600 transition-colors"
+          title="章节列表"
+        >
+          <List className="w-5 h-5" />
+        </motion.button>
+
+        {/* Main Action Button (Choice Trigger) */}
+        <AnimatePresence>
+          {showChoices && (
+            <motion.button
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setIsChoiceModalOpen(true)}
+              className="h-14 px-8 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold shadow-lg shadow-purple-500/30 flex items-center gap-2"
+            >
+              <Sparkles className="w-5 h-5 animate-pulse" />
+              <span className="tracking-wide">抉择时刻</span>
+            </motion.button>
+          )}
+        </AnimatePresence>
+
+        {/* State Toggle */}
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => setStatePanelOpen(true)}
+          className="w-12 h-12 rounded-full glass flex items-center justify-center text-gray-600 shadow-ios-float hover:text-blue-600 transition-colors"
+          title="角色状态"
+        >
+          <User className="w-5 h-5" />
+        </motion.button>
+      </div>
+
+      {/* ------------------------------------------------------------------
+          Drawers & Modals
           ------------------------------------------------------------------ */}
       
-      {/* Mobile Chapter Drawer */}
+      {/* Chapter Drawer (Left) */}
       <AnimatePresence>
         {sidebarOpen && (
           <>
             <motion.div 
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => setSidebarOpen(false)}
-              className="fixed inset-0 z-50 bg-black/20 backdrop-blur-sm lg:hidden"
+              className="fixed inset-0 z-50 bg-black/20 backdrop-blur-sm"
             />
             <motion.div 
               initial={{ x: "-100%" }} animate={{ x: 0 }} exit={{ x: "-100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed inset-y-0 left-0 z-50 w-[80%] max-w-[300px] bg-white lg:hidden shadow-2xl"
+              className="fixed inset-y-0 left-0 z-50 w-80 bg-white/90 backdrop-blur-xl shadow-2xl border-r border-white/50"
             >
-              <div className="p-4 flex justify-end">
+              <div className="p-4 flex justify-between items-center border-b border-gray-100">
+                <span className="font-bold text-gray-900">章节目录</span>
                 <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(false)}>
                   <X className="w-5 h-5" />
                 </Button>
@@ -330,19 +342,19 @@ export default function AdventurePlayPage() {
         )}
       </AnimatePresence>
 
-      {/* Mobile State Drawer */}
+      {/* State Drawer (Right) */}
       <AnimatePresence>
         {statePanelOpen && (
           <>
             <motion.div 
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => setStatePanelOpen(false)}
-              className="fixed inset-0 z-50 bg-black/20 backdrop-blur-sm lg:hidden"
+              className="fixed inset-0 z-50 bg-black/20 backdrop-blur-sm"
             />
             <motion.div 
               initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed inset-y-0 right-0 z-50 w-[85%] max-w-[340px] bg-white lg:hidden shadow-2xl p-4"
+              className="fixed inset-y-0 right-0 z-50 w-80 bg-white/90 backdrop-blur-xl shadow-2xl border-l border-white/50 p-4"
             >
               <div className="flex justify-between items-center mb-4">
                 <span className="font-bold text-lg">角色状态</span>
@@ -361,7 +373,17 @@ export default function AdventurePlayPage() {
         )}
       </AnimatePresence>
 
-      {/* 游戏结束对话框 */}
+      {/* Choice Modal */}
+      <ChoiceModal
+        isOpen={isChoiceModalOpen}
+        onClose={() => setIsChoiceModalOpen(false)}
+        choices={viewingNode.choices}
+        onSelect={handleChoice}
+        playerState={currentAdventure.player_state}
+        disabled={isRolling}
+      />
+
+      {/* Game End Dialog */}
       {currentAdventure && (
         <GameEndDialog
           open={showEndDialog}
@@ -369,7 +391,6 @@ export default function AdventurePlayPage() {
           adventure={currentAdventure}
           trigger={currentAdventure.final_ending === 'game_over' ? 'auto' : 'manual'}
           endingContent={
-            // 仅当是happy或tragic结局时，传入最后一个节点的内容
             (currentAdventure.final_ending === "happy" || currentAdventure.final_ending === "tragic")
               ? nodes[nodes.length - 1]?.content
               : undefined

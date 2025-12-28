@@ -77,7 +77,46 @@ CONTINUE_SYSTEM_PROMPT = """你是一位专业的网络小说写手,拥有5年�
 
 清晨的阳光透过窗帘的缝隙洒进房间，林凡缓缓睁开双眼..."""
 
-CONTINUE_USER_TEMPLATE = """请续写小说的下一章。
+CONTINUE_USER_TEMPLATE = """请根据前文内容继续创作。
+
+## 小说基础信息
+- **类型**:{category}
+- **风格**:{style}
+
+## 角色设定
+{characters_json}
+
+## 世界观设定
+{world_settings}
+
+## 上一章标题
+{previous_chapter_title}
+
+## 前文概要/上文内容
+{previous_summary}
+
+## 创作大纲/指引
+{chapter_outline}
+
+## 写作要求
+1. **紧接上文**：无缝衔接前文的剧情、场景和对话，不要另起炉灶。
+2. **大纲遵循**：如果提供了创作大纲，请**优先**参考大纲设定剧情发展方向。
+3. **字数要求**：
+   - 目标字数: {word_count}字
+   - 允许误差: ±10%
+4. **风格要求**: 保持与前文一致的"{style}"风格。
+5. **内容推进**：实质性推进情节发展，避免注水。
+
+## 特殊要求
+{special_requirements}
+
+## 输出要求
+- 直接输出续写内容，**不要**生成章节标题（除非内容刚好跨越到新章节）。
+- 不要重复前文内容。
+
+现在开始续写："""
+
+GENERATE_CHAPTER_USER_TEMPLATE = """请创作一个新的章节。
 
 ## 小说基础信息
 - **类型**:{category}
@@ -95,23 +134,17 @@ CONTINUE_USER_TEMPLATE = """请续写小说的下一章。
 ## 前情提要
 {previous_summary}
 
-## 本章大纲
+## 本章大纲/创作指引
 {chapter_outline}
 
 ## 写作要求
-1. **字数要求（硬性指标）**:
+1. **大纲执行**：**严格遵循**提供的【本章大纲/创作指引】进行创作。如果大纲包含具体情节点，请确保逐一落实。
+2. **完整性**：写出一个完整的章节，包含开头、发展、高潮（或小高潮）和结尾（或悬念）。
+3. **字数要求**：
    - 目标字数: {word_count}字
-   - 允许误差: ±10% (即 {min_words}-{max_words}字)
-   - **重要**: 字数不足会影响章节质量,请确保内容充实
-2. **风格要求**:必须严格遵循"{style}"的风格特点
-   - 热血爽文：快节奏、强爽点、打脸升级、主角威武
-   - 细腻感人：细腻描写、情感渲染、心理刻画、温馨感动
-   - 紧张刺激：悬念迭起、节奏紧凑、危机四伏、扣人心弦
-   - 轻松幽默：诙谐对话、搞笑情节、轻松氛围、趣味盎然
-   - 严肃正剧：厚重深刻、逻辑严密、人物立体、矛盾复杂
-3. **节奏把控**:战斗场面快节奏,情感场面细腻
-4. **章节结尾**:留有适当悬念
-5. **标题要求**:必须是全新标题，不能与上一章标题重复或高度相似，避免复用上一章标题中的关键词/意象
+   - 允许误差: ±10%
+4. **风格要求**: 严格遵循"{style}"风格。
+5. **标题要求**: 必须为本章起一个有创意、吸引人的标题（格式：# 第X章 标题）。
 
 ## 特殊要求
 {special_requirements}
@@ -119,9 +152,9 @@ CONTINUE_USER_TEMPLATE = """请续写小说的下一章。
 ## 输出格式
 1. 第一行：章节标题（格式：# 第X章 标题内容）
 2. 空一行
-3. 正文内容（{min_words}-{max_words}字）
+3. 正文内容
 
-现在开始写作："""
+现在开始创作："""
 
 
 # ========== 文本扩写提示词 ==========
@@ -366,6 +399,7 @@ def get_continue_prompt(
     special_requirements: str = "无",
     novel_title: str = "",
     story_summary: str = "",
+    mode: str = "continue",
 ) -> tuple[str, str]:
     """生成续写提示词对(系统提示词, 用户提示词)
 
@@ -375,7 +409,12 @@ def get_continue_prompt(
     min_words = int(word_count * 0.9)
     max_words = int(word_count * 1.1)
 
-    user_prompt = CONTINUE_USER_TEMPLATE.format(
+    if mode == "generate_chapter":
+        template = GENERATE_CHAPTER_USER_TEMPLATE
+    else:
+        template = CONTINUE_USER_TEMPLATE
+
+    user_prompt = template.format(
         category=category,
         style=style,
         characters_json=characters_json,
@@ -908,8 +947,11 @@ STORY_NODE_USER_TEMPLATE = """请生成故事的下一章节。
    - 中段400-800字（2-4段）：展开剧情
    - 结尾200-300字（1-2段）：悬念铺垫
    - ⚠️ 段落之间必须用两个换行符（\\n\\n）分隔
-- 对话要符合人物性格，不要假大空
-- 描写要有画面感，不要抽象概括
+5. **排版美化（重要）**：
+   - 使用 **粗体** 强调关键物品、地名、人名或重要的动作。
+   - 使用 > 引用块 来表示回忆、传说、系统提示或特殊的内心独白。
+   - 对话要符合人物性格，不要假大空
+   - 描写要有画面感，不要抽象概括
 
 ### 2. 状态变化（state_changes）
 根据剧情合理调整玩家状态：

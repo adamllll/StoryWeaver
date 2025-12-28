@@ -65,7 +65,7 @@ export function AIAssistant({
   });
 
   return (
-    <div className="flex flex-col h-full bg-white/40 backdrop-blur-xl relative">
+    <div className="flex flex-col h-full relative">
       {/* 顶部标题栏 */}
       <AIAssistantHeader novelId={novelId} onClearMessages={clearMessages} />
 

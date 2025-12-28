@@ -371,7 +371,18 @@ async def generate_outline(
         # 提取JSON字段
         title = result.get("title", "未命名小说").strip()
         description = result.get("description", "暂无简介").strip()
-        outline = result.get("outline", "").strip()
+        
+        # 鲁棒性处理：outline 可能是列表或字符串
+        raw_outline = result.get("outline", "")
+        if isinstance(raw_outline, list):
+            outline = "\n".join(str(item) for item in raw_outline).strip()
+        else:
+            outline = str(raw_outline).strip()
+
+        # 再次清理可能存在的 Markdown 代码块标记（如果 AI 在字段值里也加了）
+        outline = re.sub(r"^```markdown\s*", "", outline)
+        outline = re.sub(r"^```\s*", "", outline)
+        outline = re.sub(r"\s*```$", "", outline)
 
         # 如果大纲为空,返回错误
         if not outline:
@@ -570,6 +581,7 @@ async def continue_chapter(
         previous_chapter_title=previous_title or "无",
         word_count=request.word_count,
         special_requirements=request.special_requirements or "无",
+        mode=request.mode or "continue",
     )
 
     min_words = int(request.word_count * 0.9)
@@ -591,7 +603,9 @@ async def continue_chapter(
                 warnings = []
                 if last_word_count and last_word_count < min_words:
                     warnings.append(f"上次输出 {last_word_count} 字，低于最低要求 {min_words} 字")
-                if is_generic_chapter_title(last_title):
+                
+                # 仅在生成整章模式下检查标题
+                if request.mode == "generate_chapter" and is_generic_chapter_title(last_title):
                     warnings.append("标题不够具体或缺失，请生成有创意的章节标题")
 
                 if warnings:
@@ -604,7 +618,7 @@ async def continue_chapter(
 
             logger.info(
                 f"AI 续写尝试 {attempt + 1}/{MAX_RETRIES}: novel_id={request.novel_id}, "
-                f"user_id={current_user.id}, target_range={min_words}-{max_words}"
+                f"user_id={current_user.id}, target_range={min_words}-{max_words}, mode={request.mode}"
             )
 
             raw_response, usage = await ai_service.generate(
@@ -634,7 +648,15 @@ async def continue_chapter(
                 continue
 
             generated_title, generated_body = extract_title_and_content(generated_content)
+            
+            # 如果没有提取到 body，说明可能没有标题行，或者全都是正文
             if not generated_body:
+                generated_body = generated_content
+            
+            # 如果是续写模式，通常不需要标题，直接使用全部内容作为正文（除非 AI 还是自作聪明加了标题）
+            # 但 extract_title_and_content 已经尽量处理了。
+            # 如果是续写模式，且没有检测到明显的标题行，那整个 content 就是 body
+            if request.mode == "continue" and not generated_title:
                 generated_body = generated_content
 
             generated_word_count = len(generated_body)
@@ -650,23 +672,25 @@ async def continue_chapter(
                 )
                 continue
 
-            if is_generic_chapter_title(generated_title):
-                last_word_count = generated_word_count
-                last_title = generated_title
-                last_error = "章节标题缺失或过于通用"
-                logger.warning(
-                    f"续写尝试 {attempt + 1} 失败: {last_error}, novel_id={request.novel_id}"
-                )
-                continue
+            # 仅在生成整章模式下严格检查标题
+            if request.mode == "generate_chapter":
+                if is_generic_chapter_title(generated_title):
+                    last_word_count = generated_word_count
+                    last_title = generated_title
+                    last_error = "章节标题缺失或过于通用"
+                    logger.warning(
+                        f"续写尝试 {attempt + 1} 失败: {last_error}, novel_id={request.novel_id}"
+                    )
+                    continue
 
-            if previous_title and is_title_too_similar(generated_title, previous_title):
-                last_word_count = generated_word_count
-                last_title = generated_title
-                last_error = "章节标题与上一章重复或过于相似"
-                logger.warning(
-                    f"续写尝试 {attempt + 1} 失败: {last_error}, novel_id={request.novel_id}"
-                )
-                continue
+                if previous_title and is_title_too_similar(generated_title, previous_title):
+                    last_word_count = generated_word_count
+                    last_title = generated_title
+                    last_error = "章节标题与上一章重复或过于相似"
+                    logger.warning(
+                        f"续写尝试 {attempt + 1} 失败: {last_error}, novel_id={request.novel_id}"
+                    )
+                    continue
 
             logger.info(
                 f"AI 续写成功: title={generated_title}, word_count={generated_word_count}, "
@@ -680,8 +704,8 @@ async def continue_chapter(
                 usage=total_usage,
             )
 
-        # 标题补救：保留达标的正文，仅补生成创意标题
-        if best_body and len(best_body) >= min_words:
+        # 标题补救：仅在生成整章模式下且有合格正文时尝试
+        if request.mode == "generate_chapter" and best_body and len(best_body) >= min_words:
             chapter_count = db.query(Chapter).filter(Chapter.novel_id == request.novel_id).count()
             chapter_number = resolve_chapter_number(current_chapter, chapter_count)
 

@@ -47,13 +47,16 @@ export function useAIAssistant({
   const [optimizedContent, setOptimizedContent] = useState("");
   const [isOptimizing, setIsOptimizing] = useState(false);
 
-  // 监听文本选择
+  // 监听文本选择 - 使用 ref 避免依赖循环
+  const selectedTextRef = useRef(selectedText);
+  selectedTextRef.current = selectedText;
+
   useEffect(() => {
     const handleSelectionChange = () => {
       setTimeout(() => {
         const selection = window.getSelection();
         const text = selection?.toString().trim() || "";
-        if (text !== selectedText) {
+        if (text !== selectedTextRef.current) {
           setSelectedText(text);
         }
       }, 200);
@@ -63,7 +66,7 @@ export function useAIAssistant({
     return () => {
       document.removeEventListener("selectionchange", handleSelectionChange);
     };
-  }, [selectedText]);
+  }, []);
 
   // 自动滚动
   useEffect(() => {
@@ -126,19 +129,19 @@ export function useAIAssistant({
     addUserMessage(`请${useStyle === "自动推断" ? "" : `以【${useStyle}】风格`}续写`);
 
     try {
-      const plainText = editorContent.replace(/<[^>]*>/g, '').trim();
-      const chapterOutline = plainText.substring(0, 500) || currentChapter.title;
-
       // 获取光标位置（如果提供了回调）
       const cursorPosition = getCursorPosition?.() ?? undefined;
 
+      // 智能续写模式：不需要显式的大纲，而是依赖上下文
+      // 如果有 novelOutline，可以作为参考传入，但不要把正文当大纲传
       const result = await aiApi.continueChapter({
         novel_id: novelId,
         chapter_id: currentChapter.id,
-        chapter_outline: chapterOutline,
+        chapter_outline: novelOutline ? `小说背景大纲：\n${novelOutline.substring(0, 500)}` : "",
         word_count: 800,  // 默认800字续写
         style: useStyle === "自动推断" ? undefined : useStyle,
         cursor_position: cursorPosition,  // 传递光标位置
+        mode: "continue",
       });
 
       addAiMessage(`**续写内容（${useStyle}）：**\n\n${result.content}\n\n---\n字数：${result.word_count}`);
@@ -149,7 +152,7 @@ export function useAIAssistant({
     } finally {
       setIsAILoading(false);
     }
-  }, [currentChapter, editorContent, novelId, continueStyle, getCursorPosition, addUserMessage, addAiMessage, onContentInsert, handleError, toast]);
+  }, [currentChapter, editorContent, novelId, continueStyle, getCursorPosition, addUserMessage, addAiMessage, onContentInsert, handleError, toast, novelOutline]);
 
   // 2. 生成整章
   const handleAIGenerateChapter = useCallback(async () => {
@@ -198,6 +201,7 @@ export function useAIAssistant({
         chapter_id: currentChapter.id,
         chapter_outline: chapterOutlineText,  // 关键修复：使用小说大纲
         word_count: 2000,  // 生成整章默认2000字
+        mode: "generate_chapter",
       });
 
       addAiMessage(`**生成整章：**\n\n${result.content}\n\n---\n字数：${result.word_count}`);

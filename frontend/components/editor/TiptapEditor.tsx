@@ -138,7 +138,6 @@ export function TiptapEditor({
       if (content === "") {
         editor.commands.clearContent();
         setWordCount(0);
-        onWordCountChange?.(0);
         return;
       }
 
@@ -150,13 +149,12 @@ export function TiptapEditor({
       // 这里我们使用 emitUpdate: false 防止触发 onChange 导致循环
       editor.commands.setContent(htmlContent, { emitUpdate: false });
 
-      // 更新字数统计
+      // 更新字数统计（仅更新本地状态，不通知父组件，避免循环更新）
       const text = editor.getText();
       const count = text.length;
       setWordCount(count);
-      onWordCountChange?.(count);
     }
-  }, [content, editor, onWordCountChange]);
+  }, [content, editor]);
 
   // 组件卸载时销毁编辑器
   useEffect(() => {

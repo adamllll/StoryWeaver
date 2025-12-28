@@ -4,7 +4,7 @@
 
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { ChapterSummary } from "@/lib/types";
 import {
   TrendingUp,
@@ -26,6 +26,21 @@ export function ProgressDashboard({
   targetWordCount = 100000,
   targetChapterCount = 20,
 }: ProgressDashboardProps) {
+  // 模拟热力图数据 (只生成一次，避免重渲染时跳动)
+  const heatmapData = useState(() => 
+    Array.from({ length: 30 }, (_, i) => {
+      const date = new Date();
+      date.setDate(date.getDate() - (29 - i));
+      // 模拟数据：随机字数 0-2000
+      const words = Math.floor(Math.random() * 2000);
+      return {
+        date: date.toLocaleDateString("zh-CN", { month: "numeric", day: "numeric" }),
+        words,
+        level: words === 0 ? 0 : words < 500 ? 1 : words < 1000 ? 2 : words < 1500 ? 3 : 4,
+      };
+    })
+  )[0];
+
   // 计算统计数据
   const stats = useMemo(() => {
     const totalWords = chapters.reduce((sum, c) => sum + c.word_count, 0);
@@ -39,19 +54,6 @@ export function ProgressDashboard({
       (totalChapters / targetChapterCount) * 100
     );
 
-    // 生成最近 30 天的热力图数据（模拟）
-    const heatmapData = Array.from({ length: 30 }, (_, i) => {
-      const date = new Date();
-      date.setDate(date.getDate() - (29 - i));
-      // 模拟数据：随机字数 0-2000
-      const words = Math.floor(Math.random() * 2000);
-      return {
-        date: date.toLocaleDateString("zh-CN", { month: "numeric", day: "numeric" }),
-        words,
-        level: words === 0 ? 0 : words < 500 ? 1 : words < 1000 ? 2 : words < 1500 ? 3 : 4,
-      };
-    });
-
     return {
       totalWords,
       totalChapters,
@@ -59,7 +61,6 @@ export function ProgressDashboard({
       branchChapters,
       wordProgress,
       chapterProgress,
-      heatmapData,
     };
   }, [chapters, targetWordCount, targetChapterCount]);
 
@@ -168,7 +169,7 @@ export function ProgressDashboard({
 
         {/* 热力图网格 */}
         <div className="flex flex-wrap gap-1.5">
-          {stats.heatmapData.map((day, index) => (
+          {heatmapData.map((day, index) => (
             <div
               key={index}
               className="group relative w-8 h-8 rounded-md transition-all duration-200 hover:scale-110 hover:shadow-lg cursor-pointer"

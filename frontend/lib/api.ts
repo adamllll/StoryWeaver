@@ -377,6 +377,7 @@ export const aiApi = {
     style?: string;
     special_requirements?: string;
     cursor_position?: number;  // 光标位置（字符偏移量），用于从指定位置续写
+    mode?: "continue" | "generate_chapter"; // 生成模式
   }) => apiClient.post<{
     content: string;
     title: string;
@@ -516,6 +517,27 @@ export const adventureApi = {
   // 探索社区冒险（其他用户的冒险）
   explore: (params?: { category?: string; skip?: number; limit?: number }) =>
     apiClient.get<Adventure[]>("/adventures/explore", params),
+
+  // 获取可分叉节点
+  getForkPoints: (id: number) =>
+    apiClient.get<{
+      adventure_id: number;
+      adventure_title: string;
+      total_nodes: number;
+      fork_points: {
+        node_id: number;
+        chapter_num: number;
+        title: string;
+        preview: string;
+        state_after: unknown;
+        has_choices: boolean;
+        word_count: number;
+      }[];
+    }>(`/adventures/${id}/fork-points`),
+
+  // 从指定节点分叉冒险
+  fork: (id: number, data: { fork_from_node_id: number }) =>
+    apiClient.post<Adventure>(`/adventures/${id}/fork`, data),
 
   // 新增：结束冒险
   finish: (id: number, data: { ending_type: 'happy' | 'tragic' | 'user_quit' }) =>

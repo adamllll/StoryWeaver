@@ -1,5 +1,4 @@
-"use client";
-
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import {
@@ -7,11 +6,14 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Adventure } from "@/lib/adventure-types";
-import { Trophy, Heart, Zap, Package, BookOpen } from "lucide-react";
+import { adventureApi } from "@/lib/api";
+import { Trophy, Heart, Zap, Package, BookOpen, Save } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/components/ui/use-toast";
 
 interface GameEndDialogProps {
   open: boolean;
@@ -122,6 +124,13 @@ export function GameEndDialog({
   endingContent, // 接收AI生成的结局内容
 }: GameEndDialogProps) {
   const router = useRouter();
+  const { toast } = useToast();
+  const [selectedEnding, setSelectedEnding] = useState<"happy" | "tragic" | "user_quit" | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // 如果冒险已经结束，或者触发方式是自动（Game Over），则显示总结视图
+  // 否则，显示选择视图
+  const isSelectionMode = !adventure.is_finished && trigger === "manual";
 
   // 视觉主题：自动结束（红色警告）vs 主动结束（蓝色庆祝）
   const theme =
@@ -136,25 +145,138 @@ export function GameEndDialog({
         };
 
   const handleClose = () => {
-    // "稍后查看"应该关闭对话框并返回列表，而不是停留在当前页面
-    onOpenChange(false);
-    router.push("/adventures");
+    // 只有在已完成状态下，关闭才跳转
+    if (adventure.is_finished) {
+      onOpenChange(false);
+      router.push("/adventures");
+    } else {
+      onOpenChange(false);
+    }
   };
 
   const handleBackToList = () => {
     router.push("/adventures");
   };
 
-  // 用户通过任何方式关闭对话框时，都导航回列表页
-  const handleDialogChange = (isOpen: boolean) => {
-    if (!isOpen) {
-      router.push("/adventures");
+  const handleFinishAdventure = async () => {
+    if (!selectedEnding) return;
+
+    setIsSubmitting(true);
+    try {
+      await adventureApi.finish(adventure.id, { ending_type: selectedEnding });
+      toast({
+        title: "冒险结束",
+        description: "你的传奇已载入史册",
+      });
+      // 刷新页面或重新加载数据以显示总结视图
+      // 这里简单处理：关闭对话框并跳转（或者父组件会刷新数据）
+      // 由于是 mutate 操作，最好是 invalidate query 或者手动刷新
+      window.location.reload(); 
+    } catch (error) {
+      toast({
+        title: "操作失败",
+        description: "无法结束冒险，请稍后重试",
+        variant: "destructive",
+      });
+      setIsSubmitting(false);
     }
-    onOpenChange(isOpen);
   };
 
+  // --- 1. 选择结局视图 ---
+  if (isSelectionMode) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-3xl bg-white/95 backdrop-blur-xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-center mb-2">书写你的结局</DialogTitle>
+            <p className="text-center text-gray-500">旅途即将到达终点，你希望如何收场？</p>
+          </DialogHeader>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 py-6">
+            {/* 完美结局 */}
+            <div
+              onClick={() => setSelectedEnding("happy")}
+              className={cn(
+                "cursor-pointer p-6 rounded-2xl border-2 transition-all hover:scale-[1.02]",
+                selectedEnding === "happy"
+                  ? "border-yellow-400 bg-yellow-50/50 shadow-lg ring-2 ring-yellow-200"
+                  : "border-gray-100 bg-white hover:border-yellow-200 hover:shadow-md"
+              )}
+            >
+              <div className="w-12 h-12 rounded-full bg-yellow-100 flex items-center justify-center mb-4 text-yellow-600 mx-auto">
+                <Trophy className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold text-center text-gray-900 mb-2">完美结局</h3>
+              <p className="text-sm text-gray-500 text-center leading-relaxed">
+                主角克服万难，达成所愿。获得圆满的归宿和世人的赞颂。
+              </p>
+            </div>
+
+            {/* 悲剧结局 */}
+            <div
+              onClick={() => setSelectedEnding("tragic")}
+              className={cn(
+                "cursor-pointer p-6 rounded-2xl border-2 transition-all hover:scale-[1.02]",
+                selectedEnding === "tragic"
+                  ? "border-purple-400 bg-purple-50/50 shadow-lg ring-2 ring-purple-200"
+                  : "border-gray-100 bg-white hover:border-purple-200 hover:shadow-md"
+              )}
+            >
+              <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center mb-4 text-purple-600 mx-auto">
+                <Heart className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold text-center text-gray-900 mb-2">悲剧结局</h3>
+              <p className="text-sm text-gray-500 text-center leading-relaxed">
+                命运无常，虽败犹荣。用牺牲或遗憾来升华故事的深刻内涵。
+              </p>
+            </div>
+
+            {/* 存档退出 */}
+            <div
+              onClick={() => setSelectedEnding("user_quit")}
+              className={cn(
+                "cursor-pointer p-6 rounded-2xl border-2 transition-all hover:scale-[1.02]",
+                selectedEnding === "user_quit"
+                  ? "border-gray-400 bg-gray-50/50 shadow-lg ring-2 ring-gray-200"
+                  : "border-gray-100 bg-white hover:border-gray-200 hover:shadow-md"
+              )}
+            >
+              <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mb-4 text-gray-600 mx-auto">
+                <Save className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold text-center text-gray-900 mb-2">暂且休息</h3>
+              <p className="text-sm text-gray-500 text-center leading-relaxed">
+                现在的状态将被保存。你可以在未来随时重启这段旅程。
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter className="flex justify-between gap-4">
+            <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
+              我再想想
+            </Button>
+            <Button 
+              onClick={handleFinishAdventure} 
+              disabled={!selectedEnding || isSubmitting}
+              className={cn(
+                "flex-[2] text-white font-bold transition-all",
+                selectedEnding === "happy" ? "bg-yellow-500 hover:bg-yellow-600" :
+                selectedEnding === "tragic" ? "bg-purple-600 hover:bg-purple-700" :
+                selectedEnding === "user_quit" ? "bg-gray-800 hover:bg-gray-900" :
+                "bg-gray-300 cursor-not-allowed"
+              )}
+            >
+              {isSubmitting ? "生成结局中..." : "确认结局"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  // --- 2. 结局总结视图 (原有逻辑) ---
   return (
-    <Dialog open={open} onOpenChange={handleDialogChange}>
+    <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent
         className={cn(
           "max-w-2xl bg-gradient-to-br",
@@ -183,8 +305,14 @@ export function GameEndDialog({
                 <BookOpen className="h-4 w-4" />
                 AI创作的结局
               </h3>
-              <div className="prose prose-sm max-w-none text-gray-700 max-h-64 overflow-y-auto">
-                <ReactMarkdown>{endingContent}</ReactMarkdown>
+              <div className="prose prose-sm max-w-none text-gray-700 max-h-[60vh] overflow-y-auto custom-scrollbar">
+                <ReactMarkdown
+                  components={{
+                    p: ({ children }) => <p className="mb-4 last:mb-0 indent-8 leading-relaxed">{children}</p>
+                  }}
+                >
+                  {endingContent}
+                </ReactMarkdown>
               </div>
             </div>
           </>

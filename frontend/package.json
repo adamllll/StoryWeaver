@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "postbuild": "node scripts/ensure-jsdom-default-stylesheet.cjs",
     "start": "next start",
     "lint": "next lint",
     "test": "jest",

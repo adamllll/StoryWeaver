@@ -9,7 +9,7 @@
 
 "use client";
 
-import { useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   DndContext,
   closestCenter,
@@ -40,7 +40,6 @@ import {
 } from "lucide-react";
 import { ChapterListProps, ChapterSummary } from "@/lib/types";
 import { ChapterPreview } from "./ChapterPreview";
-import { ChapterContextMenu } from "./ChapterContextMenu";
 import { useToast } from "@/components/ui/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
@@ -55,7 +54,6 @@ function SortableChapterItem({
   chapter,
   index,
   isActive,
-  novelId,
   onChapterClick,
   onChapterDelete,
 }: {
@@ -74,7 +72,6 @@ function SortableChapterItem({
     transition,
     isDragging,
   } = useSortable({ id: chapter.id });
-  const { toast } = useToast();
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -84,125 +81,100 @@ function SortableChapterItem({
   };
 
   return (
-    <ChapterContextMenu
-      onEdit={() => onChapterClick(chapter.id)}
-      onDelete={() => {
-        if (confirm(`确定要删除章节「${chapter.title}」吗？`)) {
-          onChapterDelete(chapter.id);
-        }
-      }}
-      onDuplicate={() => toast({ title: "复制章节", description: "该功能即将上线" })}
-      onCreateBranch={() => toast({ title: "创建分支", description: "该功能即将上线" })}
-      onAddTag={(tag) => toast({ title: "添加标签", description: `已为章节添加标签：${tag}` })}
-      onViewStats={() => toast({ title: "章节统计", description: `${chapter.title}\n字数：${chapter.word_count.toLocaleString()} 字` })}
-      onCopyLink={() => {
-        const link = `${window.location.origin}/read/${novelId}/${chapter.id}`;
-        navigator.clipboard.writeText(link);
-        toast({ title: "复制成功", description: "章节链接已复制到剪贴板" });
-      }}
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
     >
-      <div
-        ref={setNodeRef}
-        style={style}
-        {...attributes}
-      >
-        <ChapterPreview chapter={chapter}>
+      <ChapterPreview chapter={chapter}>
+        <div
+          className={cn(
+            "group relative flex items-start p-3.5 rounded-ios-lg cursor-pointer transition-all duration-200 border",
+            isActive
+              ? "bg-white border-purple-200 shadow-ios-purple scale-[1.02]"
+              : "bg-white/40 border-transparent hover:bg-white/80 hover:border-gray-100 hover:shadow-sm",
+            isDragging && "shadow-2xl opacity-80 scale-105 bg-white z-50"
+          )}
+          onClick={() => onChapterClick(chapter.id)}
+        >
+          {/* 拖拽手柄 */}
           <div
+            {...listeners}
             className={cn(
-              "group relative flex items-start p-3.5 rounded-ios-lg cursor-pointer transition-all duration-200 border",
-              isActive
-                ? "bg-white border-purple-200 shadow-ios-purple scale-[1.02]"
-                : "bg-white/40 border-transparent hover:bg-white/80 hover:border-gray-100 hover:shadow-sm",
-              isDragging && "shadow-2xl opacity-80 scale-105 bg-white z-50"
+              "mt-1 mr-2 cursor-grab active:cursor-grabbing transition-opacity",
+              isActive ? "text-purple-300" : "text-gray-300 opacity-0 group-hover:opacity-100"
             )}
-            onClick={() => onChapterClick(chapter.id)}
           >
-            {/* 拖拽手柄 */}
-            <div
-              {...listeners}
-              className={cn(
-                "mt-1 mr-2 cursor-grab active:cursor-grabbing transition-opacity",
-                isActive ? "text-purple-300" : "text-gray-300 opacity-0 group-hover:opacity-100"
-              )}
-            >
-              <GripVertical className="w-4 h-4" />
-            </div>
-
-            {/* 章节信息 */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-start gap-2.5 mb-1.5">
-                <span
-                  className={cn(
-                    "flex-shrink-0 w-5 h-5 flex items-center justify-center text-[10px] font-bold rounded-md transition-colors mt-0.5",
-                    isActive
-                      ? "bg-purple-100 text-purple-700"
-                      : "bg-gray-100 text-gray-500 group-hover:bg-gray-200"
-                  )}
-                >
-                  {index + 1}
-                </span>
-
-                <h3
-                  className={cn(
-                    "flex-1 text-sm font-semibold leading-snug line-clamp-1 transition-colors",
-                    isActive ? "text-gray-900" : "text-gray-700 group-hover:text-gray-900"
-                  )}
-                >
-                  {chapter.title}
-                </h3>
-              </div>
-
-              <div className="flex items-center gap-2 ml-7 text-[10px]">
-                <span className={cn("font-medium", isActive ? "text-purple-600" : "text-gray-500")}>
-                  {chapter.word_count.toLocaleString()} 字
-                </span>
-
-                {chapter.is_branch && (
-                  <>
-                    <span className="text-gray-300">|</span>
-                    <span className="px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-600 font-medium flex items-center gap-0.5">
-                      <span className="w-1 h-1 rounded-full bg-amber-400" />
-                      分支
-                    </span>
-                  </>
-                )}
-                
-                 {/* 状态点 (示例：草稿/发布) */}
-                 {chapter.word_count < 100 && (
-                   <>
-                    <span className="text-gray-300">|</span>
-                    <span className="text-gray-400 italic">草稿</span>
-                   </>
-                 )}
-              </div>
-            </div>
-
-             {/* 悬停操作按钮 */}
-             <div className="absolute right-2 top-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button
-                  className="p-1 hover:bg-red-50 rounded text-gray-400 hover:text-red-600"
-                  title="删除章节"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (confirm(`确定要删除章节「${chapter.title}」吗？`)) {
-                      void onChapterDelete(chapter.id);
-                    }
-                  }}
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-                <button 
-                  className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-gray-600"
-                  title="更多操作（右键）"
-                  onClick={(e) => { e.stopPropagation(); }}
-                >
-                  <MoreVertical className="w-3.5 h-3.5" />
-                </button>
-             </div>
+            <GripVertical className="w-4 h-4" />
           </div>
-        </ChapterPreview>
-      </div>
-    </ChapterContextMenu>
+
+          {/* 章节信息 */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start gap-2.5 mb-1.5">
+              <span
+                className={cn(
+                  "flex-shrink-0 w-5 h-5 flex items-center justify-center text-[10px] font-bold rounded-md transition-colors mt-0.5",
+                  isActive
+                    ? "bg-purple-100 text-purple-700"
+                    : "bg-gray-100 text-gray-500 group-hover:bg-gray-200"
+                )}
+              >
+                {index + 1}
+              </span>
+
+              <h3
+                className={cn(
+                  "flex-1 text-sm font-semibold leading-snug line-clamp-1 transition-colors",
+                  isActive ? "text-gray-900" : "text-gray-700 group-hover:text-gray-900"
+                )}
+              >
+                {chapter.title}
+              </h3>
+            </div>
+
+            <div className="flex items-center gap-2 ml-7 text-[10px]">
+              <span className={cn("font-medium", isActive ? "text-purple-600" : "text-gray-500")}>
+                {chapter.word_count.toLocaleString()} 字
+              </span>
+
+              {chapter.is_branch && (
+                <>
+                  <span className="text-gray-300">|</span>
+                  <span className="px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-600 font-medium flex items-center gap-0.5">
+                    <span className="w-1 h-1 rounded-full bg-amber-400" />
+                    分支
+                  </span>
+                </>
+              )}
+
+               {/* 状态点 (示例：草稿/发布) */}
+               {chapter.word_count < 100 && (
+                 <>
+                  <span className="text-gray-300">|</span>
+                  <span className="text-gray-400 italic">草稿</span>
+                 </>
+               )}
+            </div>
+          </div>
+
+           {/* 悬停操作按钮 */}
+           <div className="absolute right-2 top-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button
+                className="p-1 hover:bg-red-50 rounded text-gray-400 hover:text-red-600"
+                title="删除章节"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (confirm(`确定要删除章节「${chapter.title}」吗？`)) {
+                    void onChapterDelete(chapter.id);
+                  }
+                }}
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+           </div>
+        </div>
+      </ChapterPreview>
+    </div>
   );
 }
 
@@ -253,7 +225,7 @@ export function EnhancedChapterList({
   ];
 
   const filteredAndSortedChapters = useMemo(() => {
-    let filtered = [...chapters];
+    let filtered = [...items];
     if (searchQuery.trim()) {
       filtered = filtered.filter((c) => c.title.toLowerCase().includes(searchQuery.toLowerCase()));
     }
@@ -270,11 +242,9 @@ export function EnhancedChapterList({
       filtered.sort((a, b) => b.word_count - a.word_count);
     } else if (sortBy === "recent") {
       filtered.sort((a, b) => b.order_num - a.order_num);
-    } else {
-      filtered.sort((a, b) => a.order_num - b.order_num);
     }
     return filtered;
-  }, [chapters, searchQuery, selectedTags, sortBy]);
+  }, [items, searchQuery, selectedTags, sortBy]);
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -288,9 +258,12 @@ export function EnhancedChapterList({
     }
   };
 
-  if (JSON.stringify(items) !== JSON.stringify(chapters)) {
+  // 仅当 chapters 内容真正变化时才更新 items
+  const chaptersJson = JSON.stringify(chapters.map(c => ({ id: c.id, order_num: c.order_num, word_count: c.word_count })));
+  useEffect(() => {
     setItems(chapters);
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chaptersJson]);
 
   return (
     <div className="flex flex-col h-full overflow-hidden">

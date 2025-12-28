@@ -119,46 +119,51 @@ export default function NovelsPage() {
       <div className="fixed top-[10%] -right-[10%] w-[40%] h-[40%] bg-blue-200/20 blur-[100px] rounded-full pointer-events-none" />
 
       {/* 导航栏 */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-white/70 backdrop-blur-3xl border-b border-white/50 shadow-sm">
-        <div className="container flex h-16 items-center justify-between">
-          <Link href="/" className="flex items-center space-x-2 group">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-purple-200 transition-transform group-hover:scale-105">
-              <BookOpen className="h-5 w-5" />
+      <header className="sticky top-0 z-50 w-full h-20">
+        {/* 毛玻璃背景层 */}
+        <div className="absolute inset-0 bg-white/70 backdrop-blur-[20px] border-b border-white/40 shadow-[0_4px_30px_rgba(0,0,0,0.03)] supports-[backdrop-filter]:bg-white/50" />
+
+        <div className="container h-full relative flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-3 group">
+            <div className="relative w-10 h-10 flex items-center justify-center bg-gradient-to-tr from-purple-600 to-indigo-600 rounded-xl shadow-lg shadow-purple-500/20 group-hover:scale-105 group-hover:shadow-purple-500/30 transition-all duration-300">
+              <BookOpen className="h-5 w-5 text-white" />
             </div>
-            <span className="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-700">织梦者</span>
+            <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-700 tracking-tight">织梦者</span>
           </Link>
-          <nav className="flex items-center space-x-1 md:space-x-2">
+          <nav className="flex items-center gap-2">
             <Link
               href="/novels"
-              className="text-sm font-medium text-purple-700 bg-purple-50 px-3 py-2 rounded-lg"
+              className="px-5 py-2.5 rounded-full text-sm font-medium text-purple-700 bg-white/60 shadow-sm transition-all duration-200"
             >
               发现小说
             </Link>
             <Link
               href="/workspace"
-              className="text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 px-3 py-2 rounded-lg transition-colors"
+              className="px-5 py-2.5 rounded-full text-sm font-medium text-gray-600 hover:text-purple-700 hover:bg-white/60 transition-all duration-200"
             >
               创作中心
             </Link>
             {isAuthenticated && user ? (
-              <div className="flex items-center gap-3 ml-4 pl-4 border-l border-gray-200">
-                 <div className="hidden md:flex flex-col items-end">
+              <div className="flex items-center gap-3 pl-6 border-l border-gray-200/50 ml-2">
+                 <div className="hidden md:flex flex-col items-end mr-1">
                     <span className="text-xs font-bold text-gray-900">{user.username}</span>
                     <span className="text-[10px] text-gray-500">作者</span>
                  </div>
-                 <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-gray-100 to-gray-200 border border-white shadow-sm flex items-center justify-center">
-                    <User className="h-4 w-4 text-gray-600" />
+                 <div className="flex items-center gap-3 px-2 py-1.5 rounded-full bg-white/50 border border-white/60 shadow-sm backdrop-blur-sm transition-transform hover:scale-105">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center text-white text-xs font-bold shadow-inner">
+                      {user.username?.[0]?.toUpperCase()}
+                    </div>
                  </div>
                  <button
                    onClick={handleLogout}
-                   className="p-2 text-gray-400 hover:text-red-500 transition-colors"
+                   className="p-2.5 hover:bg-white/80 rounded-full transition-colors text-gray-400 hover:text-red-500 shadow-sm border border-transparent hover:border-red-100"
                    title="退出登录"
                  >
                    <LogOut className="h-4 w-4" />
                  </button>
               </div>
             ) : (
-              <Link href="/login" className="ml-4 btn-primary text-sm px-5 py-2 shadow-lg shadow-purple-200/50">
+              <Link href="/login" className="ml-4 btn-primary text-sm px-5 py-2 rounded-full shadow-lg shadow-purple-200/50">
                 登录
               </Link>
             )}

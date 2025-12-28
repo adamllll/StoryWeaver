@@ -55,6 +55,7 @@ export default function AdventuresPage() {
   // UI状态
   const [searchQuery, setSearchQuery] = useState("");
   const [isDeleting, setIsDeleting] = useState<number | null>(null);
+  const [isForking, setIsForking] = useState<number | null>(null);
 
   // 更新URL参数
   const handleMainTabChange = (value: string) => {
@@ -138,6 +139,37 @@ export default function AdventuresPage() {
       });
     } finally {
       setIsDeleting(null);
+    }
+  };
+
+  const handleFork = async (adventureId: number) => {
+    if (isForking) return;
+    try {
+      setIsForking(adventureId);
+      const forkInfo = await adventureApi.getForkPoints(adventureId);
+      const forkPoints = forkInfo.fork_points ?? [];
+      const preferredPoint = [...forkPoints].reverse().find((point) => point.has_choices)
+        ?? forkPoints[forkPoints.length - 1];
+
+      if (!preferredPoint) {
+        throw new Error("没有可分叉的章节节点");
+      }
+
+      const forked = await adventureApi.fork(adventureId, { fork_from_node_id: preferredPoint.node_id });
+      toast({
+        title: "分叉成功",
+        description: `已从第 ${preferredPoint.chapter_num} 章创建新冒险`,
+      });
+      router.push(`/adventures/${forked.id}/play`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "分叉失败，请稍后重试";
+      toast({
+        title: "分叉失败",
+        description: message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsForking(null);
     }
   };
 
@@ -413,12 +445,15 @@ export default function AdventuresPage() {
               {new Date(adv.created_at).toLocaleDateString()}
             </span>
 
-            <Link href={`/adventures/${adv.id}/play`}>
-              <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white group/btn">
-                <GitFork className="w-3.5 h-3.5 mr-2" />
-                分叉探索
-              </Button>
-            </Link>
+            <Button
+              size="sm"
+              className="bg-blue-600 hover:bg-blue-700 text-white group/btn"
+              onClick={() => handleFork(adv.id)}
+              disabled={isForking === adv.id}
+            >
+              <GitFork className="w-3.5 h-3.5 mr-2" />
+              {isForking === adv.id ? "分叉中..." : "分叉探索"}
+            </Button>
           </div>
         </div>
       </Card>
@@ -426,45 +461,48 @@ export default function AdventuresPage() {
   );
 
   return (
-    <div className="min-h-screen bg-[#F9F9FB]">
+    <div className="min-h-screen bg-ios-bg">
       {/* Header */}
-      <header className="bg-white/80 backdrop-blur-xl border-b border-gray-200 sticky top-0 z-30">
-        <div className="container py-4">
+      <header className="sticky top-0 z-50 w-full h-auto min-h-[5rem] flex flex-col justify-center">
+        {/* 毛玻璃背景层 */}
+        <div className="absolute inset-0 bg-white/70 backdrop-blur-[20px] border-b border-white/40 shadow-[0_4px_30px_rgba(0,0,0,0.03)] supports-[backdrop-filter]:bg-white/50" />
+
+        <div className="container relative py-4 space-y-4">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <Link href="/">
-                <Button variant="ghost" size="icon" className="shrink-0 hover:bg-gray-100 rounded-full mr-2">
-                  <Home className="w-5 h-5 text-gray-600" />
+              <Link href="/" className="group">
+                <Button variant="ghost" size="icon" className="shrink-0 hover:bg-white/60 rounded-full mr-2 transition-colors">
+                  <Home className="w-5 h-5 text-gray-600 group-hover:text-purple-600" />
                 </Button>
               </Link>
               <div className={cn(
-                "w-10 h-10 rounded-xl flex items-center justify-center",
+                "w-10 h-10 rounded-xl flex items-center justify-center shadow-sm transition-colors",
                 mainTab === 'mine' ? "bg-purple-100 text-purple-600" : "bg-blue-100 text-blue-600"
               )}>
                 {mainTab === 'mine' ? <Gamepad2 className="w-6 h-6" /> : <Compass className="w-6 h-6" />}
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">
+                <h1 className="text-xl font-bold text-gray-900 tracking-tight">
                   {mainTab === 'mine' ? '我的冒险' : '探索社区'}
                 </h1>
-                <p className="text-xs text-gray-500">
-                  {mainTab === 'mine' ? '记录你的每一次传奇旅程' : '发现精彩的社区故事，分叉创造属于你的结局'}
+                <p className="text-xs text-gray-500 font-medium">
+                  {mainTab === 'mine' ? '记录你的每一次传奇旅程' : '发现精彩的社区故事'}
                 </p>
               </div>
             </div>
 
             <div className="flex items-center gap-3 w-full md:w-auto">
-              <div className="relative flex-1 md:w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <div className="relative flex-1 md:w-64 group">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-purple-500 transition-colors" />
                 <Input
                   placeholder="搜索标题或关键词..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 bg-gray-50/50 border-gray-200 focus:bg-white transition-all h-10"
+                  className="pl-9 bg-white/50 border-white/60 focus:bg-white focus:border-purple-200 focus:ring-2 focus:ring-purple-100 transition-all h-10 rounded-full shadow-inner"
                 />
               </div>
               <Link href="/adventures/new">
-                <Button className="bg-purple-600 hover:bg-purple-700 shadow-lg shadow-purple-500/20">
+                <Button className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-lg shadow-purple-500/20 rounded-full px-6 transition-all hover:scale-105">
                   <Plus className="w-4 h-4 mr-2" /> 新冒险
                 </Button>
               </Link>
@@ -472,19 +510,19 @@ export default function AdventuresPage() {
           </div>
 
           {/* 主Tab：我的冒险 / 探索社区 */}
-          <div className="mt-6">
+          <div>
             <Tabs value={mainTab} onValueChange={handleMainTabChange} className="w-full">
-              <TabsList className="bg-gray-100/50 p-1">
+              <TabsList className="bg-gray-100/50 p-1 rounded-full border border-white/50">
                 <TabsTrigger
                   value="mine"
-                  className="px-6 data-[state=active]:bg-white data-[state=active]:text-purple-700 data-[state=active]:shadow-sm"
+                  className="px-6 rounded-full data-[state=active]:bg-white data-[state=active]:text-purple-700 data-[state=active]:shadow-sm transition-all"
                 >
                   <Gamepad2 className="w-4 h-4 mr-2" />
                   我的冒险 ({myAdventures.length})
                 </TabsTrigger>
                 <TabsTrigger
                   value="explore"
-                  className="px-6 data-[state=active]:bg-white data-[state=active]:text-blue-700 data-[state=active]:shadow-sm"
+                  className="px-6 rounded-full data-[state=active]:bg-white data-[state=active]:text-blue-700 data-[state=active]:shadow-sm transition-all"
                 >
                   <Compass className="w-4 h-4 mr-2" />
                   探索社区 {communityAdventures.length > 0 && `(${communityAdventures.length})`}
@@ -495,18 +533,18 @@ export default function AdventuresPage() {
 
           {/* 子Tab：进行中 / 已完结（仅在我的冒险中显示）*/}
           {mainTab === 'mine' && (
-            <div className="mt-4">
+            <div className="pt-2">
               <Tabs value={subTab} onValueChange={(v) => setSubTab(v as "ongoing" | "finished")} className="w-full">
-                <TabsList className="bg-transparent p-0 h-auto border-b border-gray-200 rounded-none">
+                <TabsList className="bg-transparent p-0 h-auto border-b border-gray-200/50 rounded-none w-full justify-start">
                   <TabsTrigger
                     value="ongoing"
-                    className="px-4 py-2 rounded-none border-b-2 border-transparent data-[state=active]:border-purple-600 data-[state=active]:bg-transparent data-[state=active]:text-purple-700 data-[state=active]:shadow-none"
+                    className="px-4 py-2 rounded-none border-b-2 border-transparent data-[state=active]:border-purple-600 data-[state=active]:bg-transparent data-[state=active]:text-purple-700 data-[state=active]:shadow-none transition-all"
                   >
                     进行中 ({myAdventures.filter(a => !a.is_finished).length})
                   </TabsTrigger>
                   <TabsTrigger
                     value="finished"
-                    className="px-4 py-2 rounded-none border-b-2 border-transparent data-[state=active]:border-purple-600 data-[state=active]:bg-transparent data-[state=active]:text-purple-700 data-[state=active]:shadow-none"
+                    className="px-4 py-2 rounded-none border-b-2 border-transparent data-[state=active]:border-purple-600 data-[state=active]:bg-transparent data-[state=active]:text-purple-700 data-[state=active]:shadow-none transition-all"
                   >
                     已完结 ({myAdventures.filter(a => a.is_finished).length})
                   </TabsTrigger>

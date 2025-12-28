@@ -64,22 +64,28 @@ export function DiceRollAnimation({ rollValue, target, success, onComplete }: Di
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-white/60 backdrop-blur-md"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md"
     >
-      <div className="relative w-full max-w-md mx-4">
+      <div className="relative w-full max-w-lg mx-4">
         
         {/* Main Card */}
         <motion.div
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
+          initial={{ scale: 0.9, opacity: 0, y: 20 }}
+          animate={{ scale: 1, opacity: 1, y: 0 }}
+          transition={{ type: "spring", stiffness: 300, damping: 25 }}
           className={cn(
-            "bg-white rounded-[40px] shadow-2xl p-12 text-center border overflow-hidden relative",
-            showResult && success && "border-green-200 shadow-[0_20px_50px_rgba(16,185,129,0.3)]",
-            showResult && !success && "border-red-200 shadow-[0_20px_50px_rgba(239,68,68,0.3)]",
-            !showResult && "border-gray-200"
+            "bg-white/95 backdrop-blur-3xl rounded-[40px] shadow-2xl p-10 text-center border relative overflow-hidden",
+            showResult && success && "border-green-200 shadow-[0_0_50px_-10px_rgba(16,185,129,0.3)]",
+            showResult && !success && "border-red-200 shadow-[0_0_50px_-10px_rgba(239,68,68,0.3)]",
+            !showResult && "border-white/20"
           )}
         >
-          {/* Background Effects */}
+          {/* Header Title */}
+          <div className="absolute top-8 left-0 right-0 flex justify-center opacity-50">
+            <span className="text-xs font-bold tracking-[0.2em] text-gray-500 uppercase">
+              Destiny Deduction
+            </span>
+          </div>
           {showResult && isCriticalSuccess && (
             <div className="absolute inset-0 bg-gradient-to-tr from-yellow-100/50 to-green-100/50 animate-pulse" />
           )}

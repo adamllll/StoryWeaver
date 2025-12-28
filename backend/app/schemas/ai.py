@@ -60,6 +60,10 @@ class ContinueRequest(BaseModel):
         ge=0,
         description="光标在章节内容中的位置（字符偏移量）。如果提供，将从此位置开始续写；否则从章节末尾续写"
     )
+    mode: Optional[Literal["continue", "generate_chapter"]] = Field(
+        "continue",
+        description="生成模式：continue (续写) 或 generate_chapter (生成整章)"
+    )
 
 
 class ContinueResponse(BaseModel):

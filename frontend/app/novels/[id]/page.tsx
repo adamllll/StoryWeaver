@@ -325,7 +325,7 @@ export default function NovelDetailPage() {
 
       <footer className="bg-white/30 backdrop-blur-md border-t border-white/40 py-8 relative z-10">
         <div className="container text-center text-gray-500 text-sm">
-          <p>© 2025 织梦者 (StoryWeaver). Created by Serena.</p>
+          <p>© 2025 织梦者 (StoryWeaver). Created by Claude, Gemini & Codex.</p>
         </div>
       </footer>
     </div>

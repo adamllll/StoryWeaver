@@ -91,3 +91,7 @@ reference-project/
 .serena/
 .vscode/
 .spec-workflow/
+docs/
+AGENTS.md
+CLAUDE.md
+GEMINI.md

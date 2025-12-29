@@ -227,7 +227,7 @@ export default function HomePage() {
             <span className="font-medium text-sm text-gray-600">织梦者 StoryWeaver</span>
           </div>
           <div className="text-xs text-gray-400">
-            © 2025 Created by Serena with ❤️
+            © 2025 Created by Claude, Gemini & Codex with ❤️
           </div>
         </div>
       </footer>

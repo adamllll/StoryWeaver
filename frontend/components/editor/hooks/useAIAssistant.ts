@@ -247,13 +247,14 @@ export function useAIAssistant({
   }, [currentChapter, editorContent, novelId, novelOutline, addUserMessage, addAiMessage, onContentInsert, handleError, toast]);
 
   // 3. 扩写
-  const handleAIExpand = useCallback(async () => {
-    if (!selectedText || selectedText.length < 5) return;
+  const handleAIExpand = useCallback(async (retryText?: string) => {
+    const textToProcess = retryText || selectedText;
+    if (!textToProcess || textToProcess.length < 5) return;
 
     setIsAILoading(true);
     // 计算目标字数：默认500字，或原文的5倍（取较大值）
-    const targetWordCount = Math.max(500, selectedText.length * 5);
-    addUserMessage(`请扩写：${selectedText.substring(0, 30)}...（目标${targetWordCount}字）`);
+    const targetWordCount = Math.max(500, textToProcess.length * 5);
+    addUserMessage(`请扩写：${textToProcess.substring(0, 30)}...（目标${targetWordCount}字）`);
 
     try {
       const toPlainTextWithBreaks = (html: string): string => {
@@ -302,12 +303,12 @@ export function useAIAssistant({
         return { normalized, map };
       };
 
-      let matchIndex = plainText.indexOf(selectedText);
-      let matchEndIndex = matchIndex >= 0 ? matchIndex + selectedText.length : -1;
+      let matchIndex = plainText.indexOf(textToProcess);
+      let matchEndIndex = matchIndex >= 0 ? matchIndex + textToProcess.length : -1;
 
       if (matchIndex < 0) {
         const normalizedText = buildNormalizedMap(plainText);
-        const normalizedSelection = normalizeWhitespace(selectedText);
+        const normalizedSelection = normalizeWhitespace(textToProcess);
         const normalizedIndex = normalizedSelection
           ? normalizedText.normalized.indexOf(normalizedSelection)
           : -1;
@@ -379,7 +380,7 @@ export function useAIAssistant({
               : `结尾（约 ${positionPercent}%）`;
 
       const result = await aiApi.expandText({
-        text: selectedText,
+        text: textToProcess,
         style: "详细描写",
         word_count: targetWordCount,  // 关键修复：传递目标字数
         chapter_title: currentChapter?.title,
@@ -388,7 +389,7 @@ export function useAIAssistant({
         position_hint: positionHint,
       });
       const warningNote = result.warning ? `\n\n⚠️ ${result.warning}` : "";
-      addAiMessage(`**扩写结果：**\n\n${result.expanded_text}\n\n---\n原文 ${selectedText.length} 字 → 扩写后 ${result.word_count} 字\n\n（请手动复制到编辑器中替换原文）${warningNote}`);
+      addAiMessage(`**扩写结果：**\n\n${result.expanded_text}\n\n---\n原文 ${textToProcess.length} 字 → 扩写后 ${result.word_count} 字\n\n（请手动复制到编辑器中替换原文）${warningNote}`);
       if (result.warning) {
         toast({
           title: "扩写字数未达标",
@@ -396,26 +397,29 @@ export function useAIAssistant({
         });
       }
     } catch (error) {
-      handleError(error, "扩写失败");
+      // 保存请求参数以供重试（特别是文本）
+      lastActionParamsRef.current = { text: textToProcess };
+      handleError(error, "扩写失败", "expand");
     } finally {
       setIsAILoading(false);
     }
   }, [selectedText, editorContent, currentChapter?.title, addUserMessage, addAiMessage, handleError, toast]);
 
   // 4. 重写
-  const handleAIRewrite = useCallback(async (style?: string) => {
+  const handleAIRewrite = useCallback(async (style?: string, retryText?: string) => {
     const useStyle = style || rewriteStyle;
+    const textToProcess = retryText || selectedText;
 
-    if (!selectedText || selectedText.length < 5) return;
+    if (!textToProcess || textToProcess.length < 5) return;
 
     setIsAILoading(true);
-    addUserMessage(`请以【${useStyle}】风格重写：${selectedText.substring(0, 30)}...`);
+    addUserMessage(`请以【${useStyle}】风格重写：${textToProcess.substring(0, 30)}...`);
 
     try {
       const result = await aiApi.rewrite({
         novel_id: novelId,
         chapter_id: currentChapter?.id,
-        original_text: selectedText,
+        original_text: textToProcess,
         rewrite_style: useStyle,
       });
       const warningNote = result.warning ? `\n\n⚠️ ${result.warning}` : "";
@@ -427,7 +431,9 @@ export function useAIAssistant({
         });
       }
     } catch (error) {
-      handleError(error, "重写失败");
+      // 保存参数以供重试
+      lastActionParamsRef.current = { style: useStyle, text: textToProcess };
+      handleError(error, "重写失败", "rewrite");
     } finally {
       setIsAILoading(false);
     }
@@ -497,10 +503,10 @@ export function useAIAssistant({
         await handleAIGenerateChapter();
         break;
       case "expand":
-        await handleAIExpand();
+        await handleAIExpand(params.text as string | undefined);
         break;
       case "rewrite":
-        await handleAIRewrite(params.style as string | undefined);
+        await handleAIRewrite(params.style as string | undefined, params.text as string | undefined);
         break;
       case "optimize":
         await handleOptimizeFormat();

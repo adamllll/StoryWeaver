@@ -28,6 +28,12 @@ export default function WorkspacePage() {
   const [novels, setNovels] = useState<Novel[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+  const [filter, setFilter] = useState<'all' | 'published' | 'draft'>('all');
+
+  const filteredNovels = novels.filter((novel) => {
+    if (filter === "all") return true;
+    return novel.status === filter;
+  });
 
   // 点击外部关闭菜单
   useEffect(() => {
@@ -207,26 +213,47 @@ export default function WorkspacePage() {
           </Link>
         </div>
 
-        {/* 过滤器/状态栏 (预留) */}
+        {/* 过滤器/状态栏 */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center space-x-2 bg-white/60 backdrop-blur-xl p-1.5 rounded-2xl border border-white/50 shadow-sm">
-             <button className="px-4 py-2 text-sm font-medium bg-white shadow-sm text-gray-900 rounded-xl transition-all">
+             <button 
+               onClick={() => setFilter('all')}
+               className={`px-4 py-2 text-sm font-medium rounded-xl transition-all ${
+                 filter === 'all' 
+                   ? "bg-white shadow-sm text-gray-900" 
+                   : "text-gray-500 hover:text-gray-900 hover:bg-white/50"
+               }`}
+             >
                 全部作品
              </button>
-             <button className="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-900 rounded-xl transition-all hover:bg-white/50">
+             <button 
+               onClick={() => setFilter('published')}
+               className={`px-4 py-2 text-sm font-medium rounded-xl transition-all ${
+                 filter === 'published' 
+                   ? "bg-white shadow-sm text-gray-900" 
+                   : "text-gray-500 hover:text-gray-900 hover:bg-white/50"
+               }`}
+             >
                 已发布
              </button>
-             <button className="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-900 rounded-xl transition-all hover:bg-white/50">
+             <button 
+               onClick={() => setFilter('draft')}
+               className={`px-4 py-2 text-sm font-medium rounded-xl transition-all ${
+                 filter === 'draft' 
+                   ? "bg-white shadow-sm text-gray-900" 
+                   : "text-gray-500 hover:text-gray-900 hover:bg-white/50"
+               }`}
+             >
                 草稿箱
              </button>
           </div>
           <div className="text-sm text-gray-400 font-medium">
-            共 {novels.length} 部作品
+            共 {filteredNovels.length} 部作品
           </div>
         </div>
 
         {/* 小说列表 */}
-        {(!novels || novels.length === 0) ? (
+        {(!filteredNovels || filteredNovels.length === 0) ? (
           <div className="flex flex-col items-center justify-center py-24 px-4 text-center bg-white/40 backdrop-blur-3xl rounded-[40px] border border-white/60 shadow-[inset_0_2px_4px_rgba(255,255,255,0.8)]">
             <div className="w-24 h-24 bg-gradient-to-tr from-purple-100 to-white rounded-full flex items-center justify-center mb-6 shadow-ios-float">
               <LayoutGrid className="w-10 h-10 text-purple-300" />
@@ -246,7 +273,7 @@ export default function WorkspacePage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-            {novels.map((novel) => (
+            {filteredNovels.map((novel) => (
               <div
                 key={novel.id}
                 className="group relative flex flex-col bg-white/60 backdrop-blur-[40px] rounded-[32px] border border-white/60 shadow-[0_20px_40px_-12px_rgba(0,0,0,0.05)] hover:shadow-[0_32px_64px_-12px_rgba(0,0,0,0.1)] hover:-translate-y-1 transition-all duration-300 overflow-hidden"

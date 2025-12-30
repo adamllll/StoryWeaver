@@ -559,17 +559,44 @@ async def continue_chapter(
         return overlap >= 0.7
 
     def resolve_chapter_number(chapter: Chapter | None, total_count: int) -> int:
+        """从章节信息推断章节编号，优先级：标题 > order_num > 总数+1"""
         if chapter:
+            # 1. 尝试从标题提取阿拉伯数字（第3章、第 10 章）
             title_match = re.search(r"第\s*(\d+)\s*章", chapter.title or "")
             if title_match:
                 return int(title_match.group(1))
 
-            if isinstance(chapter.order_num, (int, float)) and float(chapter.order_num).is_integer():
-                order_num = int(chapter.order_num)
-                if order_num > 0:
-                    return order_num
+            # 2. 尝试从标题提取中文数字（第一章、第十二章）
+            cn_num_map = {"一": 1, "二": 2, "三": 3, "四": 4, "五": 5,
+                          "六": 6, "七": 7, "八": 8, "九": 9, "十": 10}
+            cn_match = re.search(r"第\s*([一二三四五六七八九十百千]+)\s*章", chapter.title or "")
+            if cn_match:
+                cn_str = cn_match.group(1)
+                # 简单处理：十以内直接映射，十以上简单计算
+                if cn_str in cn_num_map:
+                    return cn_num_map[cn_str]
+                elif cn_str.startswith("十"):
+                    if len(cn_str) == 1:
+                        return 10
+                    elif cn_str[1:] in cn_num_map:
+                        return 10 + cn_num_map[cn_str[1:]]
+                elif cn_str.endswith("十"):
+                    if cn_str[:-1] in cn_num_map:
+                        return cn_num_map[cn_str[:-1]] * 10
+
+            # 3. 使用 order_num（取整数部分，支持分支章节）
+            if isinstance(chapter.order_num, (int, float)) and chapter.order_num > 0:
+                return int(chapter.order_num)
 
         return total_count + 1
+
+    # 计算当前章节编号（用于生成整章模式）
+    # 只统计主线章节（没有父章节的章节）
+    main_chapter_count = db.query(Chapter).filter(
+        Chapter.novel_id == request.novel_id,
+        Chapter.parent_chapter_id == None  # 主线章节没有父章节
+    ).count()
+    chapter_number = resolve_chapter_number(current_chapter, main_chapter_count)
 
     system_prompt, user_prompt = get_continue_prompt(
         category=novel.category,
@@ -582,6 +609,7 @@ async def continue_chapter(
         word_count=request.word_count,
         special_requirements=request.special_requirements or "无",
         mode=request.mode or "continue",
+        chapter_number=chapter_number,
     )
 
     min_words = int(request.word_count * 0.9)
@@ -706,8 +734,7 @@ async def continue_chapter(
 
         # 标题补救：仅在生成整章模式下且有合格正文时尝试
         if request.mode == "generate_chapter" and best_body and len(best_body) >= min_words:
-            chapter_count = db.query(Chapter).filter(Chapter.novel_id == request.novel_id).count()
-            chapter_number = resolve_chapter_number(current_chapter, chapter_count)
+            # 复用之前计算的 chapter_number
 
             title_system_prompt = "你是一位擅长起章节标题的小说编辑。"
             title_user_prompt = (

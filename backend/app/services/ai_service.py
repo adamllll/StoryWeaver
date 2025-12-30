@@ -2,7 +2,8 @@
 import json
 import logging
 from typing import Optional, Literal
-from openai import AsyncOpenAI, APIError, APIConnectionError, RateLimitError
+from fastapi import HTTPException, status
+from openai import AsyncOpenAI, APIError, APIConnectionError, RateLimitError, BadRequestError, InternalServerError
 
 from ..config import settings
 from ..schemas import AIUsage
@@ -34,8 +35,8 @@ def create_retry_decorator(max_attempts: int = 3):
         配置好的 tenacity 重试装饰器
     """
     return retry(
-        # 重试条件：API 错误、连接错误、速率限制
-        retry=retry_if_exception_type((APIError, APIConnectionError, RateLimitError)),
+        # 重试条件：连接错误、速率限制、服务端错误(5xx)
+        retry=retry_if_exception_type((APIConnectionError, RateLimitError, InternalServerError)),
         # 最大尝试次数
         stop=stop_after_attempt(max_attempts),
         # 指数退避：1秒 -> 2秒 -> 4秒，最大10秒
@@ -161,6 +162,31 @@ class AIService:
 
             logger.info(f"AI 请求成功: task={task}, tokens={usage.total_tokens}")
             return content, usage
+
+        except BadRequestError as e:
+            # 捕获 OpenAI 内容安全策略错误
+            error_msg = str(e).lower()
+            # 检测内容安全相关的关键词
+            safety_keywords = ["policy", "safety", "content", "filter", "moderation", "flagged"]
+            if any(keyword in error_msg for keyword in safety_keywords):
+                logger.warning(f"内容安全违规: task={task}, error={str(e)}")
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail={
+                        "code": "content_policy_violation",
+                        "message": "生成失败：内容违反了AI安全策略，请调整提示词或剧情走向。",
+                        "original_error": str(e)
+                    }
+                )
+            # 其他 Bad Request (如 context length exceeded)
+            logger.warning(f"AI 请求无效: task={task}, error={str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "code": "invalid_request",
+                    "message": f"AI 请求无效: {str(e)}"
+                }
+            )
 
         except Exception as e:
             logger.error(f"AI 请求失败: task={task}, error={str(e)}")

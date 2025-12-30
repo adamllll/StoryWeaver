@@ -22,11 +22,15 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "/api";
 export class ApiError extends Error {
   status: number;
   detail: string;
+  code?: string;      // 错误码（如 'json_parse_error', 'content_policy_violation'）
+  retryable?: boolean; // 是否可重试
 
-  constructor(status: number, detail: string) {
+  constructor(status: number, detail: string, code?: string, retryable?: boolean) {
     super(detail);
     this.status = status;
     this.detail = detail;
+    this.code = code;
+    this.retryable = retryable;
     this.name = "ApiError";
   }
 }
@@ -94,17 +98,23 @@ async function request<T>(
     }));
     // FastAPI 验证错误返回的 detail 是数组格式，需要转换为字符串
     let errorMessage: string;
+    let errorCode: string | undefined;
+    let retryable: boolean | undefined;
+
     if (Array.isArray(error.detail)) {
       // Pydantic 验证错误格式: [{type, loc, msg, input, url}, ...]
       errorMessage = error.detail
         .map((e: { msg?: string; loc?: string[] }) => e.msg || "验证错误")
         .join("; ");
     } else if (typeof error.detail === "object") {
-      errorMessage = JSON.stringify(error.detail);
+      // 结构化错误格式: {code, message, retryable, ...}
+      errorCode = error.detail.code;
+      retryable = error.detail.retryable;
+      errorMessage = error.detail.message || JSON.stringify(error.detail);
     } else {
       errorMessage = error.detail || "发生未知错误";
     }
-    throw new ApiError(response.status, errorMessage);
+    throw new ApiError(response.status, errorMessage, errorCode, retryable);
   }
 
   // 处理 204 无内容响应

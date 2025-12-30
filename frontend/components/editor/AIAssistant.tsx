@@ -46,6 +46,7 @@ export function AIAssistant({
     setIsOptimizeDialogOpen,
     optimizedContent,
     isOptimizing,
+    canRetry,  // 新增：是否可以重试
 
     // 方法
     clearMessages,
@@ -56,6 +57,7 @@ export function AIAssistant({
     handleAIRewrite,
     handleOptimizeFormat,
     handleCustomSubmit,
+    handleRetry,  // 新增：重试功能
   } = useAIAssistant({
     novelId,
     currentChapter,
@@ -83,6 +85,7 @@ export function AIAssistant({
         isAILoading={isAILoading}
         isOptimizing={isOptimizing}
         currentChapter={currentChapter}
+        canRetry={canRetry}
         onClearSelectedText={clearSelectedText}
         onCustomPromptChange={setCustomPrompt}
         onCustomSubmit={handleCustomSubmit}
@@ -91,6 +94,7 @@ export function AIAssistant({
         onExpand={handleAIExpand}
         onRewrite={handleAIRewrite}
         onOptimizeFormat={handleOptimizeFormat}
+        onRetry={handleRetry}
       />
 
       {/* 格式优化对比弹窗 */}

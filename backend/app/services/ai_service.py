@@ -242,6 +242,16 @@ class AIService:
             return result, usage
 
         except json.JSONDecodeError as e:
+            # 尝试修复常见的 JSON 问题
+            fixed_content = self._try_fix_json(content)
+            if fixed_content:
+                try:
+                    result = json.loads(fixed_content)
+                    logger.info(f"JSON 修复成功: task={task}")
+                    return result, usage
+                except json.JSONDecodeError:
+                    pass  # 修复失败，继续原有逻辑
+
             # 记录详细的错误信息便于调试
             logger.error(
                 f"JSON 解析失败: {str(e)}",
@@ -256,7 +266,80 @@ class AIService:
                 logger.warning(f"JSON 解析失败，降级返回原始文本: task={task}")
                 return {"_raw_text": original_content, "_parse_error": str(e)}, usage
 
-            raise Exception(f"AI 响应 JSON 解析失败: {str(e)}\n原始响应预览: {content[:200]}...")
+            # 抛出可重试的错误，带有特定错误码
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail={
+                    "code": "json_parse_error",
+                    "message": "AI 响应格式异常，请点击重新生成",
+                    "retryable": True,
+                    "original_error": str(e),
+                    "response_preview": content[:200] if content else ""
+                }
+            )
+
+    def _try_fix_json(self, content: str) -> Optional[str]:
+        """
+        尝试修复常见的 JSON 格式问题
+
+        返回:
+            修复后的 JSON 字符串，如果无法修复则返回 None
+        """
+        if not content:
+            return None
+
+        import re
+
+        fixed = content.strip()
+
+        # 1. 移除可能的前缀文字（AI 有时会添加说明）
+        json_start = fixed.find('{')
+        if json_start > 0:
+            fixed = fixed[json_start:]
+
+        # 2. 尝试找到完整的 JSON 对象
+        brace_count = 0
+        json_end = -1
+        for i, char in enumerate(fixed):
+            if char == '{':
+                brace_count += 1
+            elif char == '}':
+                brace_count -= 1
+                if brace_count == 0:
+                    json_end = i + 1
+                    break
+
+        if json_end > 0:
+            fixed = fixed[:json_end]
+
+        # 3. 修复被截断的 JSON（尝试补全）
+        if fixed and not fixed.rstrip().endswith('}'):
+            # 计算缺少的闭合括号
+            open_braces = fixed.count('{') - fixed.count('}')
+            open_brackets = fixed.count('[') - fixed.count(']')
+
+            # 尝试在最后一个完整的值后截断并补全
+            # 找最后一个逗号或冒号后的位置
+            last_comma = fixed.rfind(',')
+            last_colon = fixed.rfind(':')
+
+            if last_comma > last_colon and last_comma > len(fixed) - 100:
+                # 在最后一个逗号处截断
+                fixed = fixed[:last_comma]
+
+            # 补全缺少的括号
+            fixed += ']' * open_brackets + '}' * open_braces
+
+        # 4. 修复常见的特殊字符问题
+        # 替换中文引号
+        fixed = fixed.replace('"', '"').replace('"', '"')
+        fixed = fixed.replace(''', "'").replace(''', "'")
+
+        # 5. 修复未转义的换行符（在字符串值内）
+        # 这是一个简化的处理，可能不完美
+        fixed = re.sub(r'(?<!\\)\n(?=[^"]*"[^"]*$)', '\\n', fixed)
+
+        return fixed if fixed != content else None
 
     async def generate_text(
         self,

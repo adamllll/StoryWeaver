@@ -12,6 +12,9 @@ import { useToast } from "@/components/ui/use-toast";
 export const CONTINUE_STYLES = ["自动推断", "热血爽文", "细腻感人", "紧张刺激", "轻松幽默", "严肃正剧"];
 export const REWRITE_STYLES = ["保持原意", "增强感染力", "简化表达", "改变视角", "增加对话", "增加描写"];
 
+// 重试操作类型
+type RetryableAction = "continue" | "generate_chapter" | "expand" | "rewrite" | "optimize" | null;
+
 interface UseAIAssistantProps {
   novelId: number;
   currentChapter: Chapter | null;
@@ -47,6 +50,11 @@ export function useAIAssistant({
   const [optimizedContent, setOptimizedContent] = useState("");
   const [isOptimizing, setIsOptimizing] = useState(false);
 
+  // 重试相关状态
+  const [lastAction, setLastAction] = useState<RetryableAction>(null);
+  const [canRetry, setCanRetry] = useState(false);
+  const lastActionParamsRef = useRef<Record<string, unknown>>({});
+
   // 监听文本选择 - 使用 ref 避免依赖循环
   const selectedTextRef = useRef(selectedText);
   selectedTextRef.current = selectedText;
@@ -74,22 +82,40 @@ export function useAIAssistant({
   }, [aiMessages, isAILoading]);
 
   // 通用错误处理
-  const handleError = useCallback((error: unknown, title: string) => {
+  const handleError = useCallback((error: unknown, title: string, action?: RetryableAction) => {
     let message = "发生未知错误";
+    let isRetryable = false;
+
     if (error instanceof ApiError) {
       message = error.detail;
+      // 检测可重试的错误
+      isRetryable = error.retryable === true ||
+        error.code === "json_parse_error" ||
+        error.status === 422 ||
+        error.status === 503;
     } else if (error instanceof Error) {
       message = error.message;
     }
 
+    // 设置重试状态
+    if (isRetryable && action) {
+      setCanRetry(true);
+      setLastAction(action);
+    } else {
+      setCanRetry(false);
+      setLastAction(null);
+    }
+
+    // 构建错误消息
+    const retryHint = isRetryable ? "\n\n💡 **可以点击「重新生成」按钮重试**" : "";
     setAiMessages((prev) => [
       ...prev,
-      { role: "assistant", content: `❌ **${title}**\n\n${message}` },
+      { role: "assistant", content: `❌ **${title}**\n\n${message}${retryHint}` },
     ]);
 
     toast({
       title,
-      description: message,
+      description: isRetryable ? `${message}（可重试）` : message,
       variant: "destructive",
     });
   }, [toast]);
@@ -146,9 +172,12 @@ export function useAIAssistant({
 
       addAiMessage(`**续写内容（${useStyle}）：**\n\n${result.content}\n\n---\n字数：${result.word_count}`);
       onContentInsert(result.content);
+      setCanRetry(false);  // 成功后清除重试状态
       toast({ title: "续写成功", description: `已生成 ${result.word_count} 字` });
     } catch (error) {
-      handleError(error, "续写失败");
+      // 保存请求参数以供重试
+      lastActionParamsRef.current = { style: useStyle };
+      handleError(error, "续写失败", "continue");
     } finally {
       setIsAILoading(false);
     }
@@ -206,9 +235,12 @@ export function useAIAssistant({
 
       addAiMessage(`**生成整章：**\n\n${result.content}\n\n---\n字数：${result.word_count}`);
       onContentInsert(result.content, true, result.title);
+      setCanRetry(false);  // 成功后清除重试状态
       toast({ title: "生成成功", description: `已生成 ${result.word_count} 字` });
     } catch (error) {
-      handleError(error, "生成失败");
+      // 保存请求参数以供重试
+      lastActionParamsRef.current = {};
+      handleError(error, "生成失败", "generate_chapter");
     } finally {
       setIsAILoading(false);
     }
@@ -449,6 +481,35 @@ export function useAIAssistant({
     }
   }, [customPrompt, novelId, currentChapter, addUserMessage, addAiMessage]);
 
+  // 重试功能
+  const handleRetry = useCallback(async () => {
+    if (!canRetry || !lastAction) return;
+
+    // 清除重试状态
+    setCanRetry(false);
+    const params = lastActionParamsRef.current;
+
+    switch (lastAction) {
+      case "continue":
+        await handleAIContinue(params.style as string | undefined);
+        break;
+      case "generate_chapter":
+        await handleAIGenerateChapter();
+        break;
+      case "expand":
+        await handleAIExpand();
+        break;
+      case "rewrite":
+        await handleAIRewrite(params.style as string | undefined);
+        break;
+      case "optimize":
+        await handleOptimizeFormat();
+        break;
+      default:
+        break;
+    }
+  }, [canRetry, lastAction, handleAIContinue, handleAIGenerateChapter, handleAIExpand, handleAIRewrite, handleOptimizeFormat]);
+
   return {
     // 状态
     aiMessages,
@@ -465,6 +526,7 @@ export function useAIAssistant({
     setIsOptimizeDialogOpen,
     optimizedContent,
     isOptimizing,
+    canRetry,  // 新增：是否可以重试
 
     // 方法
     clearMessages,
@@ -475,5 +537,6 @@ export function useAIAssistant({
     handleAIRewrite,
     handleOptimizeFormat,
     handleCustomSubmit,
+    handleRetry,  // 新增：重试功能
   };
 }

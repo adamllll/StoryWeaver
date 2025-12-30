@@ -32,6 +32,7 @@ interface AIActionBarProps {
   isAILoading: boolean;
   isOptimizing: boolean;
   currentChapter: Chapter | null;
+  canRetry?: boolean;  // 是否可以重试
 
   // 方法
   onClearSelectedText: () => void;
@@ -42,6 +43,7 @@ interface AIActionBarProps {
   onExpand: () => void;
   onRewrite: (style: string) => void;
   onOptimizeFormat: () => void;
+  onRetry?: () => void;  // 重试回调
 }
 
 export function AIActionBar({
@@ -50,6 +52,7 @@ export function AIActionBar({
   isAILoading,
   isOptimizing,
   currentChapter,
+  canRetry,
   onClearSelectedText,
   onCustomPromptChange,
   onCustomSubmit,
@@ -58,6 +61,7 @@ export function AIActionBar({
   onExpand,
   onRewrite,
   onOptimizeFormat,
+  onRetry,
 }: AIActionBarProps) {
   const hasSelection = selectedText.length >= 5;
 
@@ -194,6 +198,20 @@ export function AIActionBar({
               <AlignJustify className="w-3.5 h-3.5 text-blue-500" />
               优化排版
             </button>
+
+            {/* 重新生成按钮 - 仅在有可重试错误时显示 */}
+            {canRetry && onRetry && (
+              <motion.button
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                onClick={onRetry}
+                disabled={isAILoading}
+                className="flex items-center justify-center gap-2 col-span-2 py-2.5 rounded-ios-lg bg-gradient-to-r from-orange-500 to-amber-500 text-white hover:from-orange-600 hover:to-amber-600 shadow-md hover:shadow-lg text-xs font-bold transition-all active:scale-[0.98] disabled:opacity-50"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                重新生成
+              </motion.button>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

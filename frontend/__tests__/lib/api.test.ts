@@ -29,6 +29,29 @@ describe('ApiError', () => {
     expect(error.name).toBe('ApiError');
     expect(error.message).toBe('Not Found');
   });
+
+  it('should create error with code and retryable properties', () => {
+    const error = new ApiError(422, 'AI 响应格式异常', 'json_parse_error', true);
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error.status).toBe(422);
+    expect(error.detail).toBe('AI 响应格式异常');
+    expect(error.code).toBe('json_parse_error');
+    expect(error.retryable).toBe(true);
+  });
+
+  it('should have undefined code and retryable when not provided', () => {
+    const error = new ApiError(500, 'Internal Server Error');
+    expect(error.code).toBeUndefined();
+    expect(error.retryable).toBeUndefined();
+  });
+
+  it('should correctly identify retryable errors', () => {
+    const retryableError = new ApiError(503, 'Service Unavailable', 'service_overloaded', true);
+    const nonRetryableError = new ApiError(400, 'Bad Request', 'invalid_input', false);
+
+    expect(retryableError.retryable).toBe(true);
+    expect(nonRetryableError.retryable).toBe(false);
+  });
 });
 
 describe('apiClient', () => {

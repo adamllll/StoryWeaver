@@ -13,6 +13,20 @@ jest.mock('@/lib/api', () => ({
     get: jest.fn(),
     post: jest.fn(),
   },
+  ApiError: class ApiError extends Error {
+    status: number;
+    detail: string;
+    code?: string;
+    retryable?: boolean;
+    constructor(status: number, detail: string, code?: string, retryable?: boolean) {
+      super(detail);
+      this.status = status;
+      this.detail = detail;
+      this.code = code;
+      this.retryable = retryable;
+      this.name = 'ApiError';
+    }
+  },
 }));
 
 // Mock 数据
@@ -243,6 +257,32 @@ describe('useAdventureStore', () => {
         useAdventureStore.getState().makeChoice(choice)
       ).rejects.toThrow('API Error');
 
+      const state = useAdventureStore.getState();
+      expect(state.isRolling).toBe(false);
+    });
+
+    it('should propagate ApiError with retryable flag for caller to handle', async () => {
+      // 导入 ApiError 类
+      const { ApiError } = jest.requireMock('@/lib/api');
+
+      useAdventureStore.setState({ currentAdventure: mockAdventure });
+      const apiError = new ApiError(422, 'AI 响应格式异常', 'json_parse_error', true);
+      (apiClient.post as jest.Mock).mockRejectedValue(apiError);
+
+      const choice: Choice = mockNode.choices[0];
+
+      try {
+        await useAdventureStore.getState().makeChoice(choice);
+        fail('Expected error to be thrown');
+      } catch (error) {
+        // 验证错误被正确传递
+        expect(error).toBeInstanceOf(ApiError);
+        expect((error as any).status).toBe(422);
+        expect((error as any).code).toBe('json_parse_error');
+        expect((error as any).retryable).toBe(true);
+      }
+
+      // 确保 isRolling 被重置
       const state = useAdventureStore.getState();
       expect(state.isRolling).toBe(false);
     });

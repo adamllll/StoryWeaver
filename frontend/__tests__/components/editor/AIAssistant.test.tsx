@@ -61,10 +61,14 @@ jest.mock('@/lib/api', () => ({
   ApiError: class ApiError extends Error {
     status: number;
     detail: string;
-    constructor(status: number, detail: string) {
+    code?: string;
+    retryable?: boolean;
+    constructor(status: number, detail: string, code?: string, retryable?: boolean) {
       super(detail);
       this.status = status;
       this.detail = detail;
+      this.code = code;
+      this.retryable = retryable;
     }
   },
 }));
@@ -203,6 +207,24 @@ describe('AIAssistant', () => {
 
       // 按钮应该可以点击（不会抛出错误）
       expect(continueButton).toBeInTheDocument();
+    });
+  });
+
+  describe('retry functionality', () => {
+    it('should not show retry button initially', () => {
+      render(<AIAssistant {...mockProps} />);
+
+      // 初始状态下不应显示重试按钮
+      expect(screen.queryByText('重新生成')).not.toBeInTheDocument();
+    });
+
+    it('should render action bar correctly', () => {
+      render(<AIAssistant {...mockProps} />);
+
+      // 检查默认操作栏存在（智能续写、生成整章、优化排版）
+      expect(screen.getByText('智能续写')).toBeInTheDocument();
+      expect(screen.getByText('生成整章')).toBeInTheDocument();
+      expect(screen.getByText('优化排版')).toBeInTheDocument();
     });
   });
 

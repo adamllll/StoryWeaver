@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAdventureStore } from "@/lib/adventure-store";
-import { apiClient } from "@/lib/api";
+import { apiClient, ApiError } from "@/lib/api";
 import { StoryNode, Choice } from "@/lib/adventure-types";
 import { PlayerStatePanel } from "@/components/adventure/PlayerStatePanel";
 import { StoryDisplay } from "@/components/adventure/StoryDisplay";
@@ -14,7 +14,7 @@ import { DiceRollAnimation } from "@/components/adventure/DiceRollAnimation";
 import { ChapterSidebar } from "@/components/adventure/ChapterSidebar";
 import { GameEndDialog } from "@/components/adventure/GameEndDialog";
 import { Button } from "@/components/ui/button";
-import { X, BookText, Sparkles, User, List, ArrowLeft } from "lucide-react";
+import { X, BookText, Sparkles, User, List, ArrowLeft, RefreshCw } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 
 // ------------------------------------------------------------------
@@ -44,6 +44,10 @@ export default function AdventurePlayPage() {
   const [nodes, setNodes] = useState<StoryNode[]>([]);
   const [viewingNode, setViewingNode] = useState<StoryNode | null>(null);
   const [isChoiceModalOpen, setIsChoiceModalOpen] = useState(false);
+
+  // 重试相关状态
+  const [canRetry, setCanRetry] = useState(false);
+  const [lastChoice, setLastChoice] = useState<Choice | null>(null);
 
   // Initialize
   useEffect(() => {
@@ -80,19 +84,47 @@ export default function AdventurePlayPage() {
   }, [storeCurrentNode, adventureId]);
 
   // Handlers
-  const handleChoice = async (choice: Choice) => {
+  const handleChoice = useCallback(async (choice: Choice) => {
     setIsChoiceModalOpen(false);
+    setLastChoice(choice);  // 保存选择以便重试
+    setCanRetry(false);  // 清除之前的重试状态
+
     try {
       await makeChoice(choice);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "请稍后重试";
+      let message = "请稍后重试";
+      let isRetryable = false;
+
+      if (err instanceof ApiError) {
+        message = err.detail;
+        // 检测可重试的错误
+        isRetryable = err.retryable === true ||
+          err.code === "json_parse_error" ||
+          err.status === 422 ||
+          err.status === 503;
+      } else if (err instanceof Error) {
+        message = err.message;
+      }
+
+      // 设置重试状态
+      if (isRetryable) {
+        setCanRetry(true);
+      }
+
       toast({
         title: "选择失败",
-        description: message,
+        description: isRetryable ? `${message}（可重试）` : message,
         variant: "destructive"
       });
     }
-  };
+  }, [makeChoice, toast]);
+
+  // 重试功能
+  const handleRetry = useCallback(async () => {
+    if (!canRetry || !lastChoice) return;
+    setCanRetry(false);
+    await handleChoice(lastChoice);
+  }, [canRetry, lastChoice, handleChoice]);
 
   const handleAnimationComplete = () => {
     apiClient.get<StoryNode[]>(`/adventures/${adventureId}/nodes`).then(setNodes);
@@ -279,7 +311,7 @@ export default function AdventurePlayPage() {
 
         {/* Main Action Button (Choice Trigger) */}
         <AnimatePresence>
-          {showChoices && (
+          {showChoices && !canRetry && (
             <motion.button
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -291,6 +323,25 @@ export default function AdventurePlayPage() {
             >
               <Sparkles className="w-5 h-5 animate-pulse" />
               <span className="tracking-wide">抉择时刻</span>
+            </motion.button>
+          )}
+        </AnimatePresence>
+
+        {/* 重试按钮 */}
+        <AnimatePresence>
+          {canRetry && (
+            <motion.button
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleRetry}
+              disabled={isRolling}
+              className="h-14 px-8 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold shadow-lg shadow-orange-500/30 flex items-center gap-2 disabled:opacity-50"
+            >
+              <RefreshCw className="w-5 h-5" />
+              <span className="tracking-wide">重新生成</span>
             </motion.button>
           )}
         </AnimatePresence>

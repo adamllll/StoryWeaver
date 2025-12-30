@@ -240,3 +240,56 @@ class TestAuthFlow:
         )
         assert me_response2.status_code == status.HTTP_200_OK
         assert me_response2.json()["email"] == "flow@example.com"
+
+
+@pytest.mark.unit
+class TestResetPassword:
+    """密码重置测试"""
+
+    def test_reset_password_success(self, client, test_user):
+        """测试成功重置密码"""
+        response = client.post(
+            "/api/auth/reset-password",
+            json={
+                "username": test_user.username,
+                "email": test_user.email,
+                "new_password": "newpassword123"
+            }
+        )
+        assert response.status_code == status.HTTP_200_OK
+        assert "密码重置成功" in response.json()["message"]
+
+        # 验证可以使用新密码登录
+        login_response = client.post(
+            "/api/auth/login",
+            json={
+                "email": test_user.email,
+                "password": "newpassword123",
+                "remember_me": False
+            }
+        )
+        assert login_response.status_code == status.HTTP_200_OK
+
+    def test_reset_password_invalid_user(self, client):
+        """测试不存在的用户"""
+        response = client.post(
+            "/api/auth/reset-password",
+            json={
+                "username": "nonexistent",
+                "email": "nonexistent@example.com",
+                "new_password": "newpassword123"
+            }
+        )
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_reset_password_mismatch(self, client, test_user):
+        """测试用户名邮箱不匹配"""
+        response = client.post(
+            "/api/auth/reset-password",
+            json={
+                "username": test_user.username,
+                "email": "wrong@example.com",
+                "new_password": "newpassword123"
+            }
+        )
+        assert response.status_code == status.HTTP_404_NOT_FOUND

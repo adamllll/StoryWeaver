@@ -309,6 +309,7 @@ export const novelsApi = {
     description: string;
     category: string;
     cover_url: string;
+    outline: string;
   }>) => apiClient.put<NovelDetail>(`/novels/${id}`, data),
 
   publish: (id: number, publish: boolean) =>

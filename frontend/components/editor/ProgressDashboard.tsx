@@ -4,7 +4,7 @@
 
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { ChapterSummary } from "@/lib/types";
 import {
   TrendingUp,
@@ -19,27 +19,75 @@ interface ProgressDashboardProps {
   chapters: ChapterSummary[];
   targetWordCount?: number;
   targetChapterCount?: number;
+  createdAt?: string; // 新增：小说创建时间
 }
 
 export function ProgressDashboard({
   chapters,
   targetWordCount = 100000,
   targetChapterCount = 20,
+  createdAt,
 }: ProgressDashboardProps) {
-  // 模拟热力图数据 (只生成一次，避免重渲染时跳动)
-  const heatmapData = useState(() => 
-    Array.from({ length: 30 }, (_, i) => {
-      const date = new Date();
-      date.setDate(date.getDate() - (29 - i));
-      // 模拟数据：随机字数 0-2000
-      const words = Math.floor(Math.random() * 2000);
-      return {
-        date: date.toLocaleDateString("zh-CN", { month: "numeric", day: "numeric" }),
-        words,
-        level: words === 0 ? 0 : words < 500 ? 1 : words < 1000 ? 2 : words < 1500 ? 3 : 4,
-      };
-    })
-  )[0];
+  // 真实热力图数据 (基于章节更新时间)
+  const heatmapData = useMemo(() => {
+    // 1. 确定统计的起始日期
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // 如果有创建时间，且创建时间在 30 天内，则从创建日开始；否则统计最近 30 天
+    const createdDate = createdAt ? new Date(createdAt) : new Date();
+    createdDate.setHours(0, 0, 0, 0);
+    
+    const thirtyDaysAgo = new Date(today);
+    thirtyDaysAgo.setDate(today.getDate() - 29);
+    thirtyDaysAgo.setHours(0, 0, 0, 0);
+
+    // 起始日期取 max(创建日期, 30天前)
+    const startDate = createdDate > thirtyDaysAgo ? createdDate : thirtyDaysAgo;
+
+    // 计算总天数 (包含今天)
+    const diffTime = Math.abs(today.getTime() - startDate.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    
+    // 生成日期数组
+    const result: { date: string; words: number; level: number; fullDate: string; timestamp: number }[] = [];
+    for (let i = 0; i < diffDays; i++) {
+      const d = new Date(startDate);
+      d.setDate(startDate.getDate() + i);
+      const dateStr = d.toLocaleDateString("zh-CN", { month: "numeric", day: "numeric" });
+      result.push({ 
+        date: dateStr, 
+        words: 0, 
+        level: 0, 
+        fullDate: d.toDateString(),
+        timestamp: d.getTime() 
+      });
+    }
+
+    // 2. 遍历章节，将字数累加到对应的 created_at 日期
+    chapters.forEach(chapter => {
+      if (!chapter.created_at) return;
+      const createDate = new Date(chapter.created_at);
+      createDate.setHours(0, 0, 0, 0);
+
+      const dayEntry = result.find(r => r.timestamp === createDate.getTime());
+      if (dayEntry) {
+         dayEntry.words += chapter.word_count;
+      }
+    });
+
+    // 3. 计算等级
+    return result.map(day => {
+      let level = 0;
+      if (day.words > 0) {
+        if (day.words < 500) level = 1;
+        else if (day.words < 2000) level = 2;
+        else if (day.words < 5000) level = 3;
+        else level = 4;
+      }
+      return { ...day, level };
+    });
+  }, [chapters, createdAt]);
 
   // 计算统计数据
   const stats = useMemo(() => {
@@ -185,12 +233,12 @@ export function ProgressDashboard({
                     ? "#a78bfa"
                     : "#8b5cf6",
               }}
-              title={`${day.date}: ${day.words} 字`}
+              title={`${day.date}: 活跃涉及约 ${day.words} 字`}
             >
               {/* Tooltip */}
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
-                {day.date}: {day.words} 字
-                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900" />
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-900/90 backdrop-blur-sm text-white text-[10px] font-medium rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10 shadow-xl border border-white/10">
+                {day.date} · 活跃 {day.words} 字
+                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900/90" />
               </div>
             </div>
           ))}

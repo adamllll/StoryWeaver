@@ -160,10 +160,11 @@ export function useAIAssistant({
 
       // 智能续写模式：不需要显式的大纲，而是依赖上下文
       // 如果有 novelOutline，可以作为参考传入，但不要把正文当大纲传
+      // 增强：增加大纲上下文长度至 2000 字
       const result = await aiApi.continueChapter({
         novel_id: novelId,
         chapter_id: currentChapter.id,
-        chapter_outline: novelOutline ? `小说背景大纲：\n${novelOutline.substring(0, 500)}` : "",
+        chapter_outline: novelOutline ? `小说背景大纲：\n${novelOutline.substring(0, 2000)}` : "",
         word_count: 800,  // 默认800字续写
         style: useStyle === "自动推断" ? undefined : useStyle,
         cursor_position: cursorPosition,  // 传递光标位置
@@ -221,8 +222,9 @@ export function useAIAssistant({
 
     try {
       // 优先使用小说大纲，其次使用章节标题，最后使用当前内容
+      // 增强：增加大纲上下文长度至 2000 字
       const chapterOutlineText = novelOutline
-        ? `根据小说大纲创作：\n${novelOutline.substring(0, 1000)}`
+        ? `根据小说大纲创作：\n${novelOutline.substring(0, 2000)}`
         : currentChapter.title || "请自由发挥创作";
 
       const result = await aiApi.continueChapter({
@@ -473,10 +475,13 @@ export function useAIAssistant({
     addUserMessage(prompt);
 
     try {
+      // 构造组合 Prompt：用户指令 + 背景大纲
+      const combinedPrompt = `用户指令：${prompt}\n\n${novelOutline ? `参考背景大纲：\n${novelOutline.substring(0, 2000)}` : ""}`;
+
       const result = await aiApi.continueChapter({
         novel_id: novelId,
         chapter_id: currentChapter?.id || 0,
-        chapter_outline: prompt,
+        chapter_outline: combinedPrompt,
         style: "自由对话",
       });
       addAiMessage(result.content);
@@ -485,7 +490,7 @@ export function useAIAssistant({
     } finally {
       setIsAILoading(false);
     }
-  }, [customPrompt, novelId, currentChapter, addUserMessage, addAiMessage]);
+  }, [customPrompt, novelId, currentChapter, novelOutline, addUserMessage, addAiMessage]);
 
   // 重试功能
   const handleRetry = useCallback(async () => {

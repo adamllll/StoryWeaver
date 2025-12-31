@@ -58,6 +58,7 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
         username=user_data.username,
         email=user_data.email,
         password_hash=hashed_password,
+        last_login_at=datetime.utcnow(),  # 注册即登录，设置最后登录时间
     )
     db.add(user)
     db.commit()

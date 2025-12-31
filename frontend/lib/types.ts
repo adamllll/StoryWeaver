@@ -60,6 +60,7 @@ export interface ChapterSummary {
   is_branch: boolean;
   parent_chapter_id?: number; // 父章节 ID（用于分支）
   choice_text?: string; // 分支选择文本
+  created_at?: string; // 章节创建时间（用于热力图统计）
 }
 
 export interface Chapter {

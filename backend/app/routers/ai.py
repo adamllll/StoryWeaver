@@ -525,7 +525,7 @@ async def continue_chapter(
     if not chapter_outline:
         # 使用小说的整体大纲作为章节大纲
         if novel.outline:
-            chapter_outline = f"根据小说整体大纲继续创作：\n{novel.outline[:500]}"
+            chapter_outline = f"根据小说整体大纲继续创作：\n{novel.outline[:2000]}"
         else:
             chapter_outline = "根据前文内容和小说设定，自由发挥创作下一章节"
 

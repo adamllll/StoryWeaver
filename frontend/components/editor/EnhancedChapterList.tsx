@@ -37,8 +37,12 @@ import {
   BookOpen,
   List,
   MoreVertical,
+  Edit3,
+  Save,
+  Loader2,
 } from "lucide-react";
 import { ChapterListProps, ChapterSummary } from "@/lib/types";
+import { novelsApi } from "@/lib/api";
 import { ChapterPreview } from "./ChapterPreview";
 import { useToast } from "@/components/ui/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -180,6 +184,7 @@ function SortableChapterItem({
 
 interface EnhancedChapterListProps extends ChapterListProps {
   outline?: string;
+  onOutlineUpdate?: (newOutline: string) => void;
 }
 
 export function EnhancedChapterList({
@@ -190,6 +195,7 @@ export function EnhancedChapterList({
   onChapterCreate,
   onChapterDelete,
   outline,
+  onOutlineUpdate,
 }: EnhancedChapterListProps) {
   const [items, setItems] = useState(chapters);
   const [searchQuery, setSearchQuery] = useState("");
@@ -197,7 +203,39 @@ export function EnhancedChapterList({
   const [sortBy, setSortBy] = useState<SortType>("order");
   const [isFilterExpanded, setIsFilterExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState<"chapters" | "outline">("chapters");
+  
+  // 大纲编辑状态
+  const [isEditingOutline, setIsEditingOutline] = useState(false);
+  const [outlineContent, setOutlineContent] = useState(outline || "");
+  const [isSavingOutline, setIsSavingOutline] = useState(false);
+
   const { toast } = useToast();
+
+  // 当外部 outline 更新时同步状态
+  useEffect(() => {
+    if (!isEditingOutline) {
+      setOutlineContent(outline || "");
+    }
+  }, [outline, isEditingOutline]);
+
+  const handleSaveOutline = async () => {
+    if (!novelId) return;
+    
+    setIsSavingOutline(true);
+    try {
+      await novelsApi.update(novelId, { outline: outlineContent });
+      toast({ title: "大纲已保存", description: "AI 助手已更新上下文" });
+      setIsEditingOutline(false);
+      if (onOutlineUpdate) {
+        onOutlineUpdate(outlineContent);
+      }
+    } catch (error) {
+      console.error(error);
+      toast({ title: "保存失败", description: "请稍后重试", variant: "destructive" });
+    } finally {
+      setIsSavingOutline(false);
+    }
+  };
 
   const handleTabChange = (value: string) => {
     if (value === "chapters" || value === "outline") {
@@ -450,18 +488,67 @@ export function EnhancedChapterList({
           </div>
         </TabsContent>
 
-        <TabsContent value="outline" className="flex-1 !m-0 !mt-0 !p-0 overflow-hidden outline-none data-[state=inactive]:hidden data-[state=active]:flex data-[state=active]:flex-col">
-          {outline ? (
+        <TabsContent value="outline" className="flex-1 !m-0 !mt-0 !p-0 overflow-hidden outline-none data-[state=inactive]:hidden data-[state=active]:flex data-[state=active]:flex-col relative group">
+          {/* 工具栏 (悬浮) */}
+          <div className="absolute top-2 right-4 z-10 flex items-center gap-2">
+            {isEditingOutline ? (
+              <>
+                <button
+                  onClick={() => {
+                    setIsEditingOutline(false);
+                    setOutlineContent(outline || ""); // 取消时重置
+                  }}
+                  disabled={isSavingOutline}
+                  className="p-1.5 rounded-full bg-white/80 shadow-sm border border-gray-200 text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-all backdrop-blur-sm"
+                  title="取消"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={handleSaveOutline}
+                  disabled={isSavingOutline}
+                  className="p-1.5 rounded-full bg-purple-600 shadow-sm border border-purple-600 text-white hover:bg-purple-700 transition-all shadow-purple-200"
+                  title="保存大纲"
+                >
+                  {isSavingOutline ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => setIsEditingOutline(true)}
+                className="p-1.5 rounded-full bg-white/80 shadow-sm border border-gray-200 text-gray-400 hover:text-purple-600 hover:border-purple-200 hover:bg-purple-50 transition-all backdrop-blur-sm opacity-0 group-hover:opacity-100"
+                title="编辑大纲"
+              >
+                <Edit3 className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          {isEditingOutline ? (
+            <div className="flex-1 p-4 h-full">
+              <textarea
+                value={outlineContent}
+                onChange={(e) => setOutlineContent(e.target.value)}
+                className="w-full h-full resize-none bg-white/50 backdrop-blur-sm border border-gray-200/50 rounded-ios-lg p-4 text-sm text-gray-700 leading-relaxed focus:outline-none focus:ring-2 focus:ring-purple-100 focus:border-purple-200 transition-all shadow-inner custom-scrollbar"
+                placeholder="在此输入故事大纲 (Markdown 格式)..."
+                autoFocus
+              />
+            </div>
+          ) : (
+            outline ? (
             <div className="flex-1 overflow-y-auto custom-scrollbar px-6 py-4 bg-white/30">
                <article className="prose prose-sm prose-purple max-w-none !mt-0 !pt-0 prose-headings:font-serif prose-p:my-2 prose-headings:my-3 prose-headings:first:mt-0 [&>*:first-child]:!mt-0 [&>*:first-child]:!pt-0 [&>h1:first-child]:!mt-0 [&>h2:first-child]:!mt-0 [&>p:first-child]:!mt-0 [&>ol:first-child]:!mt-0 [&>ul:first-child]:!mt-0">
                  <ReactMarkdown>{outline.trim()}</ReactMarkdown>
                </article>
             </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-3">
-              <BookOpen className="w-10 h-10 opacity-50" />
-              <p className="text-xs">暂无大纲内容</p>
+            ) : (
+            <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-3 group-hover:text-gray-500 transition-colors cursor-pointer" onClick={() => setIsEditingOutline(true)}>
+              <div className="p-3 rounded-full bg-gray-100 group-hover:bg-purple-50 transition-colors">
+                <Edit3 className="w-6 h-6 opacity-50 group-hover:text-purple-500" />
+              </div>
+              <p className="text-xs">点击添加故事大纲</p>
             </div>
+            )
           )}
         </TabsContent>
       </Tabs>

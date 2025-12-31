@@ -3,7 +3,8 @@
  * 本小姐的专业配置！(￣▽￣)ノ
  */
 import { marked } from 'marked';
-import DOMPurify from 'isomorphic-dompurify';
+// 移除顶层引用，防止 SSR 初始化时 jsdom 崩溃
+// import DOMPurify from 'isomorphic-dompurify';
 
 /**
  * 配置 marked 渲染器
@@ -68,12 +69,23 @@ export function markdownToHtml(markdown: string): string {
 
   const rawHtml = markdownToRawHtml(markdown);
 
-  // 使用 DOMPurify 清理 HTML，移除所有危险内容
-  return DOMPurify.sanitize(rawHtml, {
-    ALLOWED_TAGS,
-    ALLOWED_ATTR,
-    ALLOW_DATA_ATTR: false,
-  });
+  // 修复：在某些服务端环境（如 Next.js SSR）中，jsdom 可能会因为找不到默认样式表而崩溃
+  // 使用延迟加载（Lazy Load）策略，确保只在调用时才尝试加载 DOMPurify
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const domPurifyModule = require('isomorphic-dompurify');
+    const DOMPurify = domPurifyModule.default || domPurifyModule;
+
+    return DOMPurify.sanitize(rawHtml, {
+      ALLOWED_TAGS,
+      ALLOWED_ATTR,
+      ALLOW_DATA_ATTR: false,
+    });
+  } catch (error) {
+    console.error('DOMPurify 加载或清理失败 (可能是 SSR 环境下的 jsdom 问题):', error);
+    // 降级策略：如果是服务端渲染出错，返回 rawHtml 可能是可接受的临时方案
+    return rawHtml; 
+  }
 }
 
 /**

@@ -216,6 +216,11 @@ export default function NovelWorkspacePage() {
     }
   };
 
+  const handleOutlineUpdate = (newOutline: string) => {
+    if (!novel) return;
+    setNovel({ ...novel, outline: newOutline });
+  };
+
   const handleContentInsert = (content: string, replace: boolean = false, title?: string) => {
     const isAutoTitle = (value: string) => /^第\s*\d+\s*章$/.test(value.trim());
     const shouldUpdateTitle = Boolean(
@@ -359,6 +364,7 @@ export default function NovelWorkspacePage() {
                 onChapterCreate={handleChapterCreate}
                 onChapterDelete={handleChapterDelete}
                 outline={novel.outline}
+                onOutlineUpdate={handleOutlineUpdate}
               />
             </div>
           </div>
@@ -449,6 +455,7 @@ export default function NovelWorkspacePage() {
                 chapters={novel.chapters}
                 targetWordCount={100000}
                 targetChapterCount={20}
+                createdAt={novel.created_at}
               />
             </div>
           )}

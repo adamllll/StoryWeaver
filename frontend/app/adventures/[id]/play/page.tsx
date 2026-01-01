@@ -48,6 +48,7 @@ export default function AdventurePlayPage() {
   // 重试相关状态
   const [canRetry, setCanRetry] = useState(false);
   const [lastChoice, setLastChoice] = useState<Choice | null>(null);
+  const [isRegenerating, setIsRegenerating] = useState(false);
 
   // Initialize
   useEffect(() => {
@@ -126,6 +127,48 @@ export default function AdventurePlayPage() {
     await handleChoice(lastChoice);
   }, [canRetry, lastChoice, handleChoice]);
 
+  // 重新生成当前章节
+  const handleRegenerateChapter = useCallback(async () => {
+    if (!currentAdventure || isRegenerating) return;
+
+    setIsRegenerating(true);
+    try {
+      const result = await apiClient.post<{
+        message: string;
+        node: StoryNode;
+        state_after: Record<string, number>;
+      }>(`/adventures/${currentAdventure.id}/regenerate`);
+
+      // 更新当前节点
+      setViewingNode(result.node);
+
+      // 刷新节点列表
+      const updatedNodes = await apiClient.get<StoryNode[]>(`/adventures/${currentAdventure.id}/nodes`);
+      setNodes(updatedNodes);
+
+      toast({
+        title: "章节已重新生成",
+        description: "AI 为你创作了新的故事内容 ✨",
+      });
+    } catch (err: unknown) {
+      let message = "重新生成失败，请稍后重试";
+      let isRetryable = false;
+
+      if (err instanceof ApiError) {
+        message = err.detail;
+        isRetryable = err.retryable === true || err.status === 503;
+      }
+
+      toast({
+        title: "重新生成失败",
+        description: isRetryable ? `${message}（可重试）` : message,
+        variant: "destructive"
+      });
+    } finally {
+      setIsRegenerating(false);
+    }
+  }, [currentAdventure, isRegenerating, toast]);
+
   const handleAnimationComplete = () => {
     apiClient.get<StoryNode[]>(`/adventures/${adventureId}/nodes`).then(setNodes);
   };
@@ -201,18 +244,34 @@ export default function AdventurePlayPage() {
                 返回列表
               </Button>
             </Link>
-            
-            {/* End Game Trigger (Only visible if not finished) */}
-            {!currentAdventure?.is_finished && (
-               <Button 
-                 variant="ghost" 
-                 size="sm" 
-                 onClick={() => setShowEndDialog(true)}
-                 className="text-red-400 hover:text-red-600 hover:bg-red-50"
-               >
-                 提前结局
-               </Button>
-            )}
+
+            <div className="flex items-center gap-2">
+              {/* Regenerate Chapter Button (Only for chapter > 1 and not finished) */}
+              {!currentAdventure?.is_finished && isLatest && viewingNode.chapter_num > 1 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleRegenerateChapter}
+                  disabled={isRegenerating || isRolling}
+                  className="text-orange-500 hover:text-orange-600 hover:bg-orange-50"
+                >
+                  <RefreshCw className={`w-4 h-4 mr-1 ${isRegenerating ? 'animate-spin' : ''}`} />
+                  {isRegenerating ? '生成中...' : '重新生成'}
+                </Button>
+              )}
+
+              {/* End Game Trigger (Only visible if not finished) */}
+              {!currentAdventure?.is_finished && (
+                 <Button
+                   variant="ghost"
+                   size="sm"
+                   onClick={() => setShowEndDialog(true)}
+                   className="text-red-400 hover:text-red-600 hover:bg-red-50"
+                 >
+                   提前结局
+                 </Button>
+              )}
+            </div>
           </div>
           
           {/* Header Info */}

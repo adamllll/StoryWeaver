@@ -31,6 +31,7 @@ from ...schemas.adventure import (
     StoryNodeResponse,
     FinishAdventureRequest,
     FinishAdventureResponse,
+    RegenerateNodeResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -218,34 +219,21 @@ async def make_choice(
 
         logger.info(f"AI 故事节点生成完成: adventure_id={adventure_id}")
 
+    except HTTPException:
+        # 已经是 HTTP 异常（如 JSON 解析错误），直接重新抛出
+        raise
     except Exception as e:
         logger.error(f"AI 故事节点生成失败: adventure_id={adventure_id}, error={str(e)}")
-        # 使用默认内容
-        error_msg = str(e)
-        new_content = f"【{request.choice_text}】\n\n{'判定成功！' if success else '判定失败...'}\n\n（投骰 {roll_value} / 目标 {target}）\n\n⚠️ 系统错误：{error_msg}\n\n故事继续发展中..."
-        state_delta = {"生命值": 10 if success else -20}
-        new_choices = [
-            {
-                "index": 0,
-                "text": "继续探索",
-                "inner_monologue": "前方还有更多未知等待着我...",
-                "success_rate": 0.7,
-                "difficulty": "普通",
-                "potential_reward": "发现新线索",
-                "potential_risk": "可能遇到危险",
-                "state_requirements": None
-            },
-            {
-                "index": 1,
-                "text": "谨慎行事",
-                "inner_monologue": "还是小心为上...",
-                "success_rate": 0.85,
-                "difficulty": "简单",
-                "potential_reward": "安全前进",
-                "potential_risk": "可能错过机会",
-                "state_requirements": None
+        # 抛出可重试的异常，让前端显示重试按钮
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "code": "ai_generation_error",
+                "message": "AI 生成故事失败，请点击重新生成",
+                "retryable": True,
+                "original_error": str(e)[:200]
             }
-        ]
+        )
 
     # 7. 应用状态变化
     if not state_delta:
@@ -444,4 +432,184 @@ async def finish_adventure(
         message="Adventure finished successfully",
         ending_type=request.ending_type,
         novel=novel_data
+    )
+
+
+@router.post("/{adventure_id}/regenerate", response_model=RegenerateNodeResponse)
+async def regenerate_current_node(
+    adventure_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    重新生成当前章节内容
+
+    用于：
+    1. AI 生成失败后重试
+    2. 对生成结果不满意时重新生成
+
+    流程：
+    1. 获取当前节点和对应的玩家选择记录
+    2. 使用相同的投骰结果重新调用 AI
+    3. 更新当前节点的内容
+    """
+    # 1. 获取冒险
+    adventure = db.query(Adventure).filter(
+        Adventure.id == adventure_id,
+        Adventure.player_id == current_user.id
+    ).first()
+
+    if not adventure:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Adventure {adventure_id} not found"
+        )
+
+    if adventure.is_finished:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot regenerate finished adventure"
+        )
+
+    # 2. 获取当前节点
+    current_node = db.query(StoryNode).filter(
+        StoryNode.id == adventure.current_node_id
+    ).first()
+
+    if not current_node:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Current node not found"
+        )
+
+    # 第一个节点（chapter_num=1）不能重新生成，因为没有对应的选择记录
+    if current_node.chapter_num <= 1:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot regenerate the first chapter"
+        )
+
+    # 3. 获取导致当前节点的选择记录
+    player_choice = db.query(PlayerChoice).filter(
+        PlayerChoice.adventure_id == adventure_id,
+        PlayerChoice.story_node_id == current_node.parent_node_id
+    ).order_by(PlayerChoice.id.desc()).first()
+
+    if not player_choice:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No choice record found for current node"
+        )
+
+    # 4. 获取父节点（之前的节点）
+    parent_node = db.query(StoryNode).filter(
+        StoryNode.id == current_node.parent_node_id
+    ).first()
+
+    if not parent_node:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Parent node not found"
+        )
+
+    # 5. 准备重新生成
+    roll_value = player_choice.roll_value
+    target = player_choice.target_success_rate
+    success = player_choice.success
+    choice_text = player_choice.choice_text
+
+    logger.info(f"Regenerating node for adventure {adventure_id}: roll={roll_value}, target={target}, success={success}")
+
+    # 6. 收集历史上下文
+    previous_nodes = (
+        db.query(StoryNode)
+        .filter(StoryNode.adventure_id == adventure_id)
+        .filter(StoryNode.chapter_num < current_node.chapter_num)
+        .order_by(StoryNode.chapter_num.desc())
+        .limit(3)
+        .all()
+    )
+    story_context = "\n\n---\n\n".join([n.content for n in reversed(previous_nodes)])
+
+    # 7. 生成新内容
+    system_prompt, user_prompt = get_story_node_prompt(
+        category=adventure.category,
+        keywords=adventure.keywords,
+        protagonist_name=adventure.protagonist_name,
+        protagonist_gender=adventure.protagonist_gender,
+        personality=adventure.protagonist_personality,
+        player_state=current_node.state_before,  # 使用节点的前置状态
+        story_context=story_context[-5000:],
+        choice_text=choice_text,
+        roll_value=roll_value,
+        target=target,
+        success=success
+    )
+
+    try:
+        result = await ai_service.generate_adventure_node(
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+            temperature=0.8,
+            max_tokens=2000
+        )
+
+        new_content = result.get("content", "").strip()
+        state_delta = result.get("state_changes", {})
+        choices_data = result.get("choices", [])
+
+        # 转换选项格式
+        new_choices = []
+        for i, choice_data in enumerate(choices_data):
+            new_choices.append({
+                "index": choice_data.get("index", i),
+                "text": choice_data.get("text", f"选项{i+1}"),
+                "inner_monologue": choice_data.get("inner_monologue", ""),
+                "success_rate": float(choice_data.get("success_rate", 0.5)),
+                "difficulty": choice_data.get("difficulty", "普通"),
+                "potential_reward": choice_data.get("potential_reward", "未知"),
+                "potential_risk": choice_data.get("potential_risk", "未知"),
+                "state_requirements": choice_data.get("state_requirements"),
+            })
+
+        logger.info(f"Regenerated node content: {len(new_content)} chars")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to regenerate node: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "code": "ai_generation_error",
+                "message": "AI 重新生成失败，请稍后再试",
+                "retryable": True,
+                "original_error": str(e)[:200]
+            }
+        )
+
+    # 8. 应用状态变化
+    if not state_delta:
+        state_delta = player_choice.state_delta or ({"生命值": 10} if success else {"生命值": -20})
+
+    new_state = apply_state_changes(current_node.state_before, state_delta)
+
+    # 9. 更新当前节点
+    current_node.content = new_content
+    current_node.choices = new_choices
+    current_node.state_after = new_state
+
+    # 10. 更新冒险状态
+    adventure.player_state = new_state
+    # 更新字数统计（简单处理：加上差值）
+    old_word_count = len(current_node.content) if current_node.content else 0
+    adventure.total_words = adventure.total_words - old_word_count + len(new_content)
+
+    db.commit()
+    db.refresh(current_node)
+
+    return RegenerateNodeResponse(
+        message="Chapter regenerated successfully",
+        node=StoryNodeResponse.model_validate(current_node),
+        state_after=new_state
     )

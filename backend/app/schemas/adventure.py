@@ -120,3 +120,10 @@ class FinishAdventureResponse(BaseModel):
     message: str
     ending_type: str
     novel: dict  # 整理后的完整小说数据
+
+
+class RegenerateNodeResponse(BaseModel):
+    """重新生成章节的响应"""
+    message: str
+    node: StoryNodeResponse
+    state_after: dict

@@ -239,7 +239,35 @@ def mock_ai_service(monkeypatch):
 
     async def mock_generate_json(system_prompt, user_prompt, max_tokens=4000, temperature=0.7, task=None):
         # 根据提示词判断返回类型
-        if "角色" in system_prompt or "character" in system_prompt.lower():
+        # 🆕 冒险节点生成（识别关键词："互动小说的叙事者"）
+        if "互动小说的叙事者" in system_prompt or "判定结果处理" in system_prompt:
+            return {
+                "content": "测试故事内容。主角继续前进，探索未知的领域。\n\n经过一番探索，主角发现了新的线索。",
+                "state_changes": {"生命值": 10},
+                "choices": [
+                    {
+                        "index": 0,
+                        "text": "继续探索",
+                        "inner_monologue": "前方还有更多未知...",
+                        "success_rate": 0.7,
+                        "difficulty": "普通",
+                        "potential_reward": "发现新线索",
+                        "potential_risk": "可能遇到危险",
+                        "state_requirements": None
+                    },
+                    {
+                        "index": 1,
+                        "text": "谨慎行事",
+                        "inner_monologue": "还是小心为上...",
+                        "success_rate": 0.85,
+                        "difficulty": "简单",
+                        "potential_reward": "安全前进",
+                        "potential_risk": "可能错过机会",
+                        "state_requirements": None
+                    }
+                ]
+            }, AIUsage(prompt_tokens=100, completion_tokens=200, total_tokens=300)
+        elif "角色" in system_prompt or "character" in system_prompt.lower():
             # 从 user_prompt 中提取 role_type（如果有的话）
             role_type = "主角"  # 默认值
             if "反派" in user_prompt:

@@ -381,7 +381,7 @@ class TestConversationPersistence:
 class TestGameLogic:
     """测试游戏核心逻辑"""
 
-    def test_make_choice_success(self, client, auth_headers, test_adventure, test_story_node, monkeypatch):
+    def test_make_choice_success(self, client, auth_headers, test_adventure, test_story_node, monkeypatch, mock_ai_service):
         """测试玩家选择（成功）"""
         # Mock 骰子结果为成功
         from app.routers.adventures import gameplay
@@ -405,7 +405,7 @@ class TestGameLogic:
         assert data["success"] is True
         assert data["roll_value"] == 50
 
-    def test_make_choice_failure(self, client, auth_headers, test_adventure, test_story_node, monkeypatch):
+    def test_make_choice_failure(self, client, auth_headers, test_adventure, test_story_node, monkeypatch, mock_ai_service):
         """测试玩家选择（失败）"""
         from app.routers.adventures import gameplay
 

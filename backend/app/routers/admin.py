@@ -717,7 +717,13 @@ async def update_env_config(
     meta = ALLOWED_ENV_KEYS[data.key]
 
     # 更新文件
-    update_env_file(env_path, data.key, data.value)
+    try:
+        update_env_file(env_path, data.key, data.value)
+    except OSError as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"无法写入配置文件（文件系统只读）：{str(e)}。请通过环境变量或Docker配置设置此参数。"
+        )
 
     # 返回更新后的值（敏感信息隐藏）
     display_value = mask_secret(data.value) if meta["is_secret"] and data.value else data.value

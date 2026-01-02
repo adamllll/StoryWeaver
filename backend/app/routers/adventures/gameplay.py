@@ -150,10 +150,17 @@ async def make_choice(
             detail=f"Cannot make this choice: {reason}"
         )
 
-    # 5. 投骰判定
+    # 5. 投骰判定（支持属性加成）
     success_rate = choice.get("success_rate", 0.5)
     difficulty = choice.get("difficulty", "普通")
-    roll_value, success = roll_dice(success_rate, difficulty)
+    relevant_attribute = choice.get("relevant_attribute")  # AI生成的相关属性
+
+    roll_value, success = roll_dice(
+        success_rate=success_rate,
+        difficulty=difficulty,
+        player_state=adventure.player_state,
+        relevant_attribute=relevant_attribute
+    )
     target = int(success_rate * 100)
 
     # 6. 调用 AI 生成后续剧情
@@ -532,27 +539,50 @@ async def regenerate_current_node(
     story_context = "\n\n---\n\n".join([n.content for n in reversed(previous_nodes)])
 
     # 7. 生成新内容
+    # 验证选项索引并获取父节点的选项数据
+    if player_choice.choice_index >= len(parent_node.choices):
+        logger.error(f"Choice index {player_choice.choice_index} out of bounds (max: {len(parent_node.choices)})")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="数据不一致：无法找到对应的选择记录"
+        )
+    
+    # 从父节点的选项中提取完整的choice上下文信息
+    parent_choice = parent_node.choices[player_choice.choice_index]
+    success_rate = parent_choice.get("success_rate", 0.5)  # 获取原始成功率（0.0-1.0）
+    choice_inner_monologue = parent_choice.get("inner_monologue", "")
+    choice_potential_reward = parent_choice.get("potential_reward", "未知")
+    choice_potential_risk = parent_choice.get("potential_risk", "未知")
+    choice_difficulty = parent_choice.get("difficulty", "普通")
+    
     system_prompt, user_prompt = get_story_node_prompt(
         category=adventure.category,
         keywords=adventure.keywords,
         protagonist_name=adventure.protagonist_name,
         protagonist_gender=adventure.protagonist_gender,
-        personality=adventure.protagonist_personality,
-        player_state=current_node.state_before,  # 使用节点的前置状态
-        story_context=story_context[-5000:],
+        protagonist_personality=adventure.protagonist_personality or "无特殊设定",
+        story_summary=story_context[-5000:],
         choice_text=choice_text,
+        choice_inner_monologue=choice_inner_monologue,
+        choice_potential_reward=choice_potential_reward,
+        choice_potential_risk=choice_potential_risk,
+        choice_difficulty=choice_difficulty,
+        success=success,
         roll_value=roll_value,
         target=target,
-        success=success
+        success_rate=success_rate,
+        player_state=current_node.state_before,
     )
 
     try:
-        result = await ai_service.generate_adventure_node(
+        result, usage = await ai_service.generate_json(
             system_prompt=system_prompt,
             user_prompt=user_prompt,
             temperature=0.8,
             max_tokens=2000
         )
+        
+        logger.info(f"AI tokens used: prompt={usage.prompt_tokens}, completion={usage.completion_tokens}")
 
         new_content = result.get("content", "").strip()
         state_delta = result.get("state_changes", {})

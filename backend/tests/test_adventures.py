@@ -386,7 +386,7 @@ class TestGameLogic:
         # Mock 骰子结果为成功
         from app.routers.adventures import gameplay
 
-        def mock_roll_dice(success_rate, difficulty="普通"):
+        def mock_roll_dice(success_rate, difficulty="普通", player_state=None, relevant_attribute=None):
             return 50, True  # 成功
 
         monkeypatch.setattr(gameplay, "roll_dice", mock_roll_dice)
@@ -409,7 +409,7 @@ class TestGameLogic:
         """测试玩家选择（失败）"""
         from app.routers.adventures import gameplay
 
-        def mock_roll_dice(success_rate, difficulty="普通"):
+        def mock_roll_dice(success_rate, difficulty="普通", player_state=None, relevant_attribute=None):
             return 80, False  # 失败
 
         monkeypatch.setattr(gameplay, "roll_dice", mock_roll_dice)

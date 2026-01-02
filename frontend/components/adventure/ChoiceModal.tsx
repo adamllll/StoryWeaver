@@ -44,6 +44,9 @@ function checkRequirements(
     // @ts-ignore
     const value = state[key] ?? state.关键属性?.[key];
 
+    // 确保 condition 是字符串类型
+    if (typeof condition !== 'string') continue;
+
     if (typeof value === 'number') {
       if (condition.includes(">=")) {
         const threshold = parseInt(condition.split(">=")[1].trim());

@@ -11,34 +11,44 @@ import random
 from typing import Tuple, Dict, Any, Optional
 
 
-def roll_dice(success_rate: float, difficulty: str = "普通") -> Tuple[int, bool]:
+def roll_dice(
+    success_rate: float,
+    difficulty: str = "普通",
+    player_state: Optional[Dict[str, Any]] = None,
+    relevant_attribute: Optional[str] = None
+) -> Tuple[int, bool]:
     """
-    D100 投骰判定系统
+    D100 投骰判定系统（支持属性加成）
 
     参数：
         success_rate: 基础成功率（0.0-1.0）
         difficulty: 难度等级（"简单", "普通", "困难", "极限"）
+        player_state: 玩家状态字典（可选）
+        relevant_attribute: 相关属性名称（可选，如"根骨"、"智力"）
 
     返回：
         (roll_value, success): 投骰值（1-100）和是否成功
 
     判定逻辑：
-        1. 根据难度调整成功率
-        2. 投D100（1-100随机数）
-        3. 特殊判定：
+        1. 计算属性加成（如果提供）
+        2. 根据难度调整成功率
+        3. 投D100（1-100随机数）
+        4. 特殊判定：
            - 1-5：大成功（Critical Success），无论目标多低
            - 96-100：大失败（Critical Failure），无论目标多高
-        4. 普通判定：roll_value <= target 则成功
+        5. 普通判定：roll_value <= target 则成功
+
+    属性加成规则：
+        - 基准值：50（无加成）
+        - 每点属性提供0.5%加成
+        - 例如：根骨70 → +10%成功率，根骨30 → -10%成功率
 
     示例：
         >>> roll_dice(0.7, "简单")
         (45, True)  # 投出45，目标84（0.7 * 1.2 * 100），成功
 
-        >>> roll_dice(0.3, "困难")
-        (62, False)  # 投出62，目标24（0.3 * 0.8 * 100），失败
-
-        >>> roll_dice(0.5, "普通")
-        (3, True)  # 投出3，大成功！
+        >>> roll_dice(0.5, "普通", {"关键属性": {"根骨": 70}}, "根骨")
+        (55, True)  # 基础50% + 属性加成10% = 60%，投出55，成功
     """
     # 难度调整系数
     difficulty_multipliers = {
@@ -51,8 +61,20 @@ def roll_dice(success_rate: float, difficulty: str = "普通") -> Tuple[int, boo
     # 获取难度系数（默认为普通）
     multiplier = difficulty_multipliers.get(difficulty, 1.0)
 
-    # 计算调整后的成功率（最高95%，避免100%必成）
-    adjusted_rate = min(success_rate * multiplier, 0.95)
+    # 计算属性加成
+    attribute_bonus = 0.0
+    if player_state and relevant_attribute:
+        key_attributes = player_state.get("关键属性", {})
+        if isinstance(key_attributes, dict) and relevant_attribute in key_attributes:
+            attribute_value = key_attributes[relevant_attribute]
+            # 每点属性提供0.5%加成，基准值50
+            attribute_bonus = (attribute_value - 50) * 0.005
+
+    # 计算调整后的成功率
+    # 先加属性加成，再乘以难度系数，最后限制在5%-95%之间
+    adjusted_rate = success_rate + attribute_bonus
+    adjusted_rate = adjusted_rate * multiplier
+    adjusted_rate = max(0.05, min(adjusted_rate, 0.95))
 
     # 投D100
     roll = random.randint(1, 100)
@@ -98,6 +120,10 @@ def check_state_requirements(
 
         value = player_state[key]
 
+        # 确保 condition 是字符串类型
+        if not isinstance(condition, str):
+            continue
+
         # 解析条件
         if ">=" in condition:
             threshold = int(condition.split(">=")[1].strip())
@@ -140,7 +166,7 @@ def apply_state_changes(
     state_delta: Dict[str, Any]
 ) -> Dict[str, Any]:
     """
-    应用状态变化到玩家状态
+    应用状态变化到玩家状态（支持嵌套属性更新）
 
     参数：
         player_state: 当前玩家状态
@@ -148,6 +174,8 @@ def apply_state_changes(
             {
                 "生命值": -20,
                 "灵力": -30,
+                "关键属性.根骨": +5,  # 嵌套属性更新
+                "关系网.师父.favor": +10,  # 嵌套属性更新
                 "物品+": [{"name": "疗伤丹", "count": 1}],
                 "故事事件+": ["击败妖兽"]
             }
@@ -157,6 +185,7 @@ def apply_state_changes(
 
     注意：
         - 以 "+" 结尾的键表示追加操作（如物品+、故事事件+）
+        - 包含 "." 的键表示嵌套属性更新（如"关键属性.根骨"）
         - 其他键表示数值加减操作
         - 会自动处理最大值限制（如生命值不超过最大生命值）
     """
@@ -194,6 +223,24 @@ def apply_state_changes(
                     new_state[base_key].extend(value)
                 else:
                     new_state[base_key].append(value)
+
+        # 嵌套属性更新（如"关键属性.根骨": +5）
+        elif "." in key:
+            keys = key.split(".")
+            current = new_state
+
+            # 导航到嵌套属性的父级
+            for k in keys[:-1]:
+                if k not in current:
+                    current[k] = {}
+                current = current[k]
+
+            # 更新最后一级属性
+            last_key = keys[-1]
+            if last_key in current and isinstance(current[last_key], (int, float)):
+                current[last_key] += value
+            else:
+                current[last_key] = value
 
         # 数值加减操作
         elif key in new_state:

@@ -36,31 +36,6 @@ export class ApiError extends Error {
 }
 
 /**
- * @deprecated 已弃用！Token 现在使用 httpOnly Cookie 存储，无需手动管理
- * 本小姐的安全升级：防止 XSS 攻击！(￣▽￣)ノ
- */
-function getToken(): string | null {
-  console.warn("⚠️ getToken() 已弃用！Token 现在由 httpOnly Cookie 自动管理");
-  return null;
-}
-
-/**
- * @deprecated 已弃用！Token 现在使用 httpOnly Cookie 存储，无需手动管理
- * 本小姐的安全升级：防止 XSS 攻击！(￣▽￣)ノ
- */
-export function setToken(token: string, rememberMe: boolean = true): void {
-  console.warn("⚠️ setToken() 已弃用！Token 现在由后端 httpOnly Cookie 自动管理");
-}
-
-/**
- * @deprecated 已弃用！Token 现在使用 httpOnly Cookie 存储，无需手动管理
- * 本小姐的安全升级：防止 XSS 攻击！(￣▽￣)ノ
- */
-export function removeToken(): void {
-  console.warn("⚠️ removeToken() 已弃用！Token 现在由后端 httpOnly Cookie 自动管理");
-}
-
-/**
  * 发起 API 请求
  * 本小姐的安全升级：使用 httpOnly Cookie 自动携带认证信息！(￣▽￣)ノ
  */

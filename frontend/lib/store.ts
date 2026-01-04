@@ -3,7 +3,7 @@
  */
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { User, authApi, setToken, removeToken } from "./api";
+import { User, authApi } from "./api";
 
 interface AuthState {
   user: User | null;
@@ -34,10 +34,10 @@ export const useAuthStore = create<AuthState>()(
       login: async (email, password, rememberMe = true) => {
         set({ isLoading: true });
         try {
-          const result = await authApi.login({ email, password, remember_me: rememberMe });
-          setToken(result.token, rememberMe);
+          const user = await authApi.login({ email, password, remember_me: rememberMe });
+          // Token 现在由 httpOnly Cookie 自动管理，无需手动设置
           set({
-            user: result,
+            user,
             isAuthenticated: true,
             isInitialized: true,
             isLoading: false,
@@ -51,10 +51,10 @@ export const useAuthStore = create<AuthState>()(
       register: async (username, email, password) => {
         set({ isLoading: true });
         try {
-          const result = await authApi.register({ username, email, password });
-          setToken(result.token);
+          const user = await authApi.register({ username, email, password });
+          // Token 现在由 httpOnly Cookie 自动管理，无需手动设置
           set({
-            user: result,
+            user,
             isAuthenticated: true,
             isInitialized: true,
             isLoading: false,
@@ -66,7 +66,8 @@ export const useAuthStore = create<AuthState>()(
       },
 
       logout: () => {
-        removeToken();
+        // Token 由 httpOnly Cookie 管理，需要调用后端 logout 接口清除 Cookie
+        // 前端只需清除状态
         set({ user: null, isAuthenticated: false, isInitialized: true });
       },
 
@@ -76,7 +77,7 @@ export const useAuthStore = create<AuthState>()(
           const user = await authApi.me();
           set({ user, isAuthenticated: true, isInitialized: true, isLoading: false });
         } catch {
-          removeToken();
+          // Token 验证失败，清除前端状态（后端 Cookie 会自动过期）
           set({ user: null, isAuthenticated: false, isInitialized: true, isLoading: false });
         }
       },

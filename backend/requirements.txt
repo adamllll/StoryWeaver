@@ -33,6 +33,9 @@ tenacity>=8.2.0
 bleach>=6.3.0
 tinycss2>=1.5.0
 
+# Rate Limiting
+slowapi>=0.1.9
+
 # Development
 python-dotenv==1.0.1
 python-multipart==0.0.9

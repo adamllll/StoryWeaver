@@ -1,5 +1,5 @@
 """认证路由 - 用户注册和登录"""
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Response
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from collections import defaultdict
@@ -9,6 +9,7 @@ from ..models import User
 from ..schemas import UserCreate, UserLogin, UserResponse, UserWithToken, PasswordReset
 from ..utils.auth import create_token, get_current_user
 from ..utils.security import hash_password, verify_password
+from ..utils.rate_limit import strict_rate_limit
 
 router = APIRouter(prefix="/auth", tags=["认证"])
 
@@ -19,17 +20,25 @@ RESET_LIMIT = 3  # 最多尝试次数
 RESET_WINDOW = 300  # 5分钟窗口（秒）
 
 
-@router.post("/register", response_model=UserWithToken, status_code=status.HTTP_201_CREATED)
-async def register(user_data: UserCreate, db: Session = Depends(get_db)):
+@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@strict_rate_limit  # 本小姐的安全防护：5次/分钟 (￣▽￣)ノ
+async def register(
+    request: Request,
+    response: Response,
+    user_data: UserCreate,
+    db: Session = Depends(get_db)
+):
     """
     注册新用户
 
     参数:
+        request: HTTP 请求对象
+        response: HTTP 响应对象（用于设置 Cookie）
         user_data: 用户注册数据（用户名、邮箱、密码）
         db: 数据库会话
 
     返回:
-        创建的用户信息及认证令牌
+        创建的用户信息（Token 通过 httpOnly Cookie 返回）
 
     异常:
         HTTPException: 邮箱或用户名已存在时抛出
@@ -64,31 +73,49 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(user)
 
-    # 生成令牌
-    token = create_token(user.id)
+    # 生成令牌（默认记住登录，30天）
+    token = create_token(user.id, remember_me=True)
 
-    return UserWithToken(
+    # 设置 httpOnly Cookie（本小姐的安全防护！防止 XSS 攻击！）(￣▽￣)ノ
+    response.set_cookie(
+        key="access_token",
+        value=token,
+        httponly=True,  # 防止 JavaScript 访问
+        secure=False,  # 开发环境使用 HTTP，生产环境应设为 True
+        samesite="lax",  # CSRF 防护
+        max_age=30 * 24 * 60 * 60,  # 30天（秒）
+    )
+
+    return UserResponse(
         id=user.id,
         username=user.username,
         email=user.email,
         avatar=user.avatar,
         bio=user.bio,
+        is_admin=user.is_admin,
         created_at=user.created_at,
-        token=token,
     )
 
 
-@router.post("/login", response_model=UserWithToken)
-async def login(credentials: UserLogin, db: Session = Depends(get_db)):
+@router.post("/login", response_model=UserResponse)
+@strict_rate_limit  # 本小姐的安全防护：5次/分钟，防止暴力破解！(￣▽￣)ノ
+async def login(
+    request: Request,
+    response: Response,
+    credentials: UserLogin,
+    db: Session = Depends(get_db)
+):
     """
     用户登录
 
     参数:
-        credentials: 登录凭证（邮箱、密码）
+        request: HTTP 请求对象
+        response: HTTP 响应对象（用于设置 Cookie）
+        credentials: 登录凭证（邮箱、密码、记住我选项）
         db: 数据库会话
 
     返回:
-        认证用户信息及令牌
+        认证用户信息（Token 通过 httpOnly Cookie 返回）
 
     异常:
         HTTPException: 凭证无效时抛出
@@ -129,14 +156,25 @@ async def login(credentials: UserLogin, db: Session = Depends(get_db)):
     # 生成令牌（根据记住我选项设置有效期）
     token = create_token(user.id, credentials.remember_me)
 
-    return UserWithToken(
+    # 设置 httpOnly Cookie（本小姐的安全防护！防止 XSS 攻击！）(￣▽￣)ノ
+    max_age = 30 * 24 * 60 * 60 if credentials.remember_me else 24 * 60 * 60  # 30天或1天
+    response.set_cookie(
+        key="access_token",
+        value=token,
+        httponly=True,  # 防止 JavaScript 访问
+        secure=False,  # 开发环境使用 HTTP，生产环境应设为 True
+        samesite="lax",  # CSRF 防护
+        max_age=max_age,
+    )
+
+    return UserResponse(
         id=user.id,
         username=user.username,
         email=user.email,
         avatar=user.avatar,
         bio=user.bio,
+        is_admin=user.is_admin,
         created_at=user.created_at,
-        token=token,
     )
 
 
@@ -162,8 +200,34 @@ async def get_me(current_user: User = Depends(get_current_user)):
     )
 
 
+@router.post("/logout", status_code=status.HTTP_200_OK)
+async def logout(response: Response):
+    """
+    用户登出
+
+    参数:
+        response: HTTP 响应对象（用于清除 Cookie）
+
+    返回:
+        成功消息
+
+    说明:
+        清除 httpOnly Cookie，实现安全登出（本小姐的安全设计！）(￣▽￣)ノ
+    """
+    # 清除 httpOnly Cookie
+    response.delete_cookie(
+        key="access_token",
+        httponly=True,
+        secure=False,  # 开发环境使用 HTTP，生产环境应设为 True
+        samesite="lax",
+    )
+
+    return {"message": "登出成功"}
+
+
 @router.post("/reset-password", status_code=status.HTTP_200_OK)
-async def reset_password(reset_data: PasswordReset, db: Session = Depends(get_db)):
+@strict_rate_limit  # 本小姐的安全防护：5次/分钟，防止密码重置滥用！(￣▽￣)ノ
+async def reset_password(request: Request, reset_data: PasswordReset, db: Session = Depends(get_db)):
     """
     重置用户密码（通过用户名和邮箱验证）
 

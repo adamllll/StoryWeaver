@@ -1,7 +1,9 @@
 """章节数据模式 - API 请求/响应验证"""
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from datetime import datetime
 from typing import Optional, List
+
+from ..utils.html_sanitizer import sanitize_chapter_content
 
 
 class ChapterBase(BaseModel):
@@ -18,6 +20,22 @@ class ChapterCreate(ChapterBase):
     parent_chapter_id: Optional[int] = None  # 创建分支章节时指定父章节
     choice_text: Optional[str] = None  # 分支选项文本
 
+    @field_validator('content')
+    @classmethod
+    def sanitize_content(cls, v: Optional[str]) -> Optional[str]:
+        """清理章节内容，防止 XSS 攻击 - 本小姐的安全防护！(￣▽￣)ノ"""
+        if v is None:
+            return v
+        return sanitize_chapter_content(v)
+
+    @field_validator('choice_text')
+    @classmethod
+    def sanitize_choice_text(cls, v: Optional[str]) -> Optional[str]:
+        """清理选项文本，防止 XSS 攻击 - 本小姐的安全防护！(￣▽￣)ノ"""
+        if v is None:
+            return v
+        return sanitize_chapter_content(v)
+
 
 class ChapterUpdate(BaseModel):
     """更新章节模式 - 所有字段可选"""
@@ -25,6 +43,22 @@ class ChapterUpdate(BaseModel):
     title: Optional[str] = Field(None, min_length=1, max_length=100)
     content: Optional[str] = Field(None, max_length=500000)  # 最多50万字符，防止DoS攻击
     choice_text: Optional[str] = None  # 允许更新选项文本
+
+    @field_validator('content')
+    @classmethod
+    def sanitize_content(cls, v: Optional[str]) -> Optional[str]:
+        """清理章节内容，防止 XSS 攻击 - 本小姐的安全防护！(￣▽￣)ノ"""
+        if v is None:
+            return v
+        return sanitize_chapter_content(v)
+
+    @field_validator('choice_text')
+    @classmethod
+    def sanitize_choice_text(cls, v: Optional[str]) -> Optional[str]:
+        """清理选项文本，防止 XSS 攻击 - 本小姐的安全防护！(￣▽￣)ノ"""
+        if v is None:
+            return v
+        return sanitize_chapter_content(v)
 
 
 class ChapterReorder(BaseModel):

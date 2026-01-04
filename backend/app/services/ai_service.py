@@ -297,7 +297,21 @@ class AIService:
         if json_start > 0:
             fixed = fixed[json_start:]
 
-        # 2. 尝试找到完整的 JSON 对象
+        # 2. 替换中文引号（在其他处理之前）
+        fixed = fixed.replace('"', '"').replace('"', '"')
+        fixed = fixed.replace(''', "'").replace(''', "'")
+
+        # 3. 修复单引号属性名（将 'key': 替换为 "key":）
+        fixed = re.sub(r"'([^']+)'(\s*):", r'"\1"\2:', fixed)
+
+        # 4. 移除尾部逗号（JSON 不允许）
+        fixed = re.sub(r',(\s*[}\]])', r'\1', fixed)
+
+        # 5. 移除注释（// 和 /* */）
+        fixed = re.sub(r'//.*?$', '', fixed, flags=re.MULTILINE)
+        fixed = re.sub(r'/\*.*?\*/', '', fixed, flags=re.DOTALL)
+
+        # 6. 尝试找到完整的 JSON 对象
         brace_count = 0
         json_end = -1
         for i, char in enumerate(fixed):
@@ -312,7 +326,7 @@ class AIService:
         if json_end > 0:
             fixed = fixed[:json_end]
 
-        # 3. 修复被截断的 JSON（尝试补全）
+        # 7. 修复被截断的 JSON（尝试补全）
         if fixed and not fixed.rstrip().endswith('}'):
             # 计算缺少的闭合括号
             open_braces = fixed.count('{') - fixed.count('}')
@@ -330,12 +344,7 @@ class AIService:
             # 补全缺少的括号
             fixed += ']' * open_brackets + '}' * open_braces
 
-        # 4. 修复常见的特殊字符问题
-        # 替换中文引号
-        fixed = fixed.replace('"', '"').replace('"', '"')
-        fixed = fixed.replace(''', "'").replace(''', "'")
-
-        # 5. 修复未转义的换行符（在字符串值内）
+        # 8. 修复未转义的换行符（在字符串值内）
         # 这是一个简化的处理，可能不完美
         fixed = re.sub(r'(?<!\\)\n(?=[^"]*"[^"]*$)', '\\n', fixed)
 

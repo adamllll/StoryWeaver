@@ -36,60 +36,47 @@ export class ApiError extends Error {
 }
 
 /**
- * 从 localStorage 或 sessionStorage 获取认证令牌
+ * @deprecated 已弃用！Token 现在使用 httpOnly Cookie 存储，无需手动管理
+ * 本小姐的安全升级：防止 XSS 攻击！(￣▽￣)ノ
  */
 function getToken(): string | null {
-  if (typeof window === "undefined") return null;
-  // 优先检查 localStorage（记住我），其次检查 sessionStorage
-  return localStorage.getItem("token") || sessionStorage.getItem("token");
+  console.warn("⚠️ getToken() 已弃用！Token 现在由 httpOnly Cookie 自动管理");
+  return null;
 }
 
 /**
- * 将认证令牌存储到 localStorage
+ * @deprecated 已弃用！Token 现在使用 httpOnly Cookie 存储，无需手动管理
+ * 本小姐的安全升级：防止 XSS 攻击！(￣▽￣)ノ
  */
 export function setToken(token: string, rememberMe: boolean = true): void {
-  if (typeof window !== "undefined") {
-    if (rememberMe) {
-      localStorage.setItem("token", token);
-      sessionStorage.removeItem("token");
-    } else {
-      sessionStorage.setItem("token", token);
-      localStorage.removeItem("token");
-    }
-  }
+  console.warn("⚠️ setToken() 已弃用！Token 现在由后端 httpOnly Cookie 自动管理");
 }
 
 /**
- * 从存储中移除认证令牌（同时清除 localStorage 和 sessionStorage）
+ * @deprecated 已弃用！Token 现在使用 httpOnly Cookie 存储，无需手动管理
+ * 本小姐的安全升级：防止 XSS 攻击！(￣▽￣)ノ
  */
 export function removeToken(): void {
-  if (typeof window !== "undefined") {
-    localStorage.removeItem("token");
-    sessionStorage.removeItem("token");
-  }
+  console.warn("⚠️ removeToken() 已弃用！Token 现在由后端 httpOnly Cookie 自动管理");
 }
 
 /**
  * 发起 API 请求
+ * 本小姐的安全升级：使用 httpOnly Cookie 自动携带认证信息！(￣▽￣)ノ
  */
 async function request<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const token = getToken();
-
   const headers: HeadersInit = {
     "Content-Type": "application/json",
     ...options.headers,
   };
 
-  if (token) {
-    (headers as Record<string, string>)["Authorization"] = `Bearer ${token}`;
-  }
-
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...options,
     headers,
+    credentials: "include",  // 关键：携带 Cookie（本小姐的安全防护！）
   });
 
   if (!response.ok) {
@@ -269,10 +256,13 @@ export interface AIUsage {
 
 export const authApi = {
   register: (data: { username: string; email: string; password: string }) =>
-    apiClient.post<UserWithToken>("/auth/register", data),
+    apiClient.post<User>("/auth/register", data),  // 本小姐的修改：不再返回 token！(￣▽￣)ノ
 
   login: (data: { email: string; password: string; remember_me?: boolean }) =>
-    apiClient.post<UserWithToken>("/auth/login", data),
+    apiClient.post<User>("/auth/login", data),  // 本小姐的修改：不再返回 token！(￣▽￣)ノ
+
+  logout: () =>
+    apiClient.post<{ message: string }>("/auth/logout"),  // 本小姐新增：清除 Cookie！(￣▽￣)ノ
 
   me: () => apiClient.get<User>("/auth/me"),
 };

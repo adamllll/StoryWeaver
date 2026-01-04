@@ -1,9 +1,10 @@
 """小说数据模式 - API 请求/响应验证"""
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from datetime import datetime
 from typing import Optional, List, Literal
 
 from .user import UserResponse
+from ..utils.html_sanitizer import sanitize_chapter_content
 
 
 # 类型枚举值
@@ -25,6 +26,22 @@ class NovelCreate(NovelBase):
 
     cover_url: Optional[str] = None
 
+    @field_validator('description')
+    @classmethod
+    def sanitize_description(cls, v: Optional[str]) -> Optional[str]:
+        """清理小说描述，防止 XSS 攻击 - 本小姐的安全防护！(￣▽￣)ノ"""
+        if v is None:
+            return v
+        return sanitize_chapter_content(v)
+
+    @field_validator('outline')
+    @classmethod
+    def sanitize_outline(cls, v: Optional[str]) -> Optional[str]:
+        """清理小说大纲，防止 XSS 攻击 - 本小姐的安全防护！(￣▽￣)ノ"""
+        if v is None:
+            return v
+        return sanitize_chapter_content(v)
+
 
 class NovelUpdate(BaseModel):
     """更新小说模式 - 所有字段可选"""
@@ -34,6 +51,22 @@ class NovelUpdate(BaseModel):
     outline: Optional[str] = Field(None, max_length=5000)  # 小说大纲
     category: Optional[NOVEL_CATEGORIES] = None
     cover_url: Optional[str] = None
+
+    @field_validator('description')
+    @classmethod
+    def sanitize_description(cls, v: Optional[str]) -> Optional[str]:
+        """清理小说描述，防止 XSS 攻击 - 本小姐的安全防护！(￣▽￣)ノ"""
+        if v is None:
+            return v
+        return sanitize_chapter_content(v)
+
+    @field_validator('outline')
+    @classmethod
+    def sanitize_outline(cls, v: Optional[str]) -> Optional[str]:
+        """清理小说大纲，防止 XSS 攻击 - 本小姐的安全防护！(￣▽￣)ノ"""
+        if v is None:
+            return v
+        return sanitize_chapter_content(v)
 
 
 class NovelPublish(BaseModel):

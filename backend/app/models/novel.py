@@ -28,6 +28,10 @@ class Novel(Base):
     total_endings = Column(Integer, default=1)
     hidden_endings = Column(Integer, default=0)
 
+    # 性能优化：缓存字段（避免实时计算）
+    cached_chapter_count = Column(Integer, default=0)  # 章节总数缓存
+    cached_word_count = Column(Integer, default=0)  # 总字数缓存
+
     # 关联关系
     author = relationship("User", back_populates="novels")
     chapters = relationship(
@@ -42,12 +46,20 @@ class Novel(Base):
 
     @property
     def chapter_count(self) -> int:
-        """获取章节总数"""
+        """获取章节总数（优先使用缓存）"""
+        # 如果缓存字段存在且有效，使用缓存
+        if hasattr(self, 'cached_chapter_count') and self.cached_chapter_count is not None:
+            return self.cached_chapter_count
+        # 否则实时计算（兼容旧数据）
         return len(self.chapters) if self.chapters else 0
 
     @property
     def word_count(self) -> int:
-        """获取所有章节的总字数"""
+        """获取所有章节的总字数（优先使用缓存）"""
+        # 如果缓存字段存在且有效，使用缓存
+        if hasattr(self, 'cached_word_count') and self.cached_word_count is not None:
+            return self.cached_word_count
+        # 否则实时计算（兼容旧数据）
         if not self.chapters:
             return 0
         return sum(

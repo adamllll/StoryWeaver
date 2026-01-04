@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 from jose import jwt, JWTError
-from fastapi import HTTPException, Depends, status, Request
+from fastapi import HTTPException, Depends, status, Request, Cookie
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 
@@ -83,15 +83,21 @@ def decode_token(token: str) -> int:
 
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    request: Request,
     db: Session = Depends(get_db),
+    access_token: Optional[str] = Cookie(None),
 ) -> User:
     """
     依赖注入：获取当前已认证的用户
 
+    支持两种认证方式（向后兼容）：
+    1. Cookie 中的 access_token（推荐，安全）
+    2. Authorization Header 中的 Bearer token（兼容旧客户端）
+
     参数:
-        credentials: HTTP Authorization 请求头
+        request: HTTP 请求对象
         db: 数据库会话
+        access_token: Cookie 中的令牌（可选）
 
     返回:
         已认证的用户对象
@@ -99,7 +105,26 @@ async def get_current_user(
     异常:
         HTTPException: 认证失败时抛出
     """
-    token = credentials.credentials
+    token = None
+
+    # 优先从 Cookie 读取（安全的 httpOnly Cookie）
+    if access_token:
+        token = access_token
+    # 后备方案：从 Authorization Header 读取（向后兼容）
+    else:
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header.replace("Bearer ", "")
+
+    # 如果没有任何令牌
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="未提供认证令牌",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # 解码令牌
     user_id = decode_token(token)
 
     user = db.query(User).filter(User.id == user_id).first()
@@ -150,26 +175,40 @@ async def get_admin_user(
 
 
 async def get_optional_user(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(
-        HTTPBearer(auto_error=False)
-    ),
+    request: Request,
     db: Session = Depends(get_db),
+    access_token: Optional[str] = Cookie(None),
 ) -> Optional[User]:
     """
     依赖注入：可选获取当前用户（用于公开端点）
 
+    支持两种认证方式：
+    1. Cookie 中的 access_token
+    2. Authorization Header 中的 Bearer token
+
     参数:
-        credentials: HTTP Authorization 请求头（可选）
+        request: HTTP 请求对象
         db: 数据库会话
+        access_token: Cookie 中的令牌（可选）
 
     返回:
         已认证则返回用户对象，否则返回 None
     """
-    if not credentials:
+    token = None
+
+    # 优先从 Cookie 读取
+    if access_token:
+        token = access_token
+    # 后备方案：从 Authorization Header 读取
+    else:
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header.replace("Bearer ", "")
+
+    if not token:
         return None
 
     try:
-        token = credentials.credentials
         user_id = decode_token(token)
         user = db.query(User).filter(User.id == user_id).first()
         return user

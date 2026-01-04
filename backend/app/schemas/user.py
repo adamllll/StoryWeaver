@@ -1,7 +1,9 @@
 """用户数据模式 - API 请求/响应验证"""
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from datetime import datetime
 from typing import Optional
+
+from ..utils.password_validator import validate_password_strength
 
 
 class UserBase(BaseModel):
@@ -14,7 +16,13 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     """用户注册模式"""
 
-    password: str = Field(..., min_length=6)
+    password: str = Field(..., min_length=8, description="密码（至少8位，包含大写字母、小写字母和数字）")
+
+    @field_validator('password')
+    @classmethod
+    def validate_password(cls, v: str) -> str:
+        """验证密码强度 - 本小姐的安全要求！(￣▽￣)ノ"""
+        return validate_password_strength(v)
 
 
 class UserLogin(BaseModel):
@@ -57,4 +65,10 @@ class PasswordReset(BaseModel):
 
     username: str = Field(..., min_length=2, max_length=50)
     email: EmailStr
-    new_password: str = Field(..., min_length=6)
+    new_password: str = Field(..., min_length=8, description="新密码（至少8位，包含大写字母、小写字母和数字）")
+
+    @field_validator('new_password')
+    @classmethod
+    def validate_new_password(cls, v: str) -> str:
+        """验证新密码强度 - 本小姐的安全要求！(￣▽￣)ノ"""
+        return validate_password_strength(v)

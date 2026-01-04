@@ -37,10 +37,55 @@ import { useAutoSave } from "@/hooks/useAutoSave";
 
 // 组件导入
 import { EnhancedChapterList } from "@/components/editor/EnhancedChapterList";
-import { MindMapTree } from "@/components/editor/MindMapTree";
-import { ProgressDashboard } from "@/components/editor/ProgressDashboard";
-import { AIAssistant } from "@/components/editor/AIAssistant";
-import { WorldSettingsPanel } from "@/components/editor/WorldSettingsPanel";
+
+// 大型组件懒加载（优化首屏加载性能）
+const MindMapTree = dynamic(
+  () => import("@/components/editor/MindMapTree").then((mod) => mod.MindMapTree),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex items-center justify-center h-full">
+        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+      </div>
+    ),
+  }
+);
+
+const ProgressDashboard = dynamic(
+  () => import("@/components/editor/ProgressDashboard").then((mod) => mod.ProgressDashboard),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex items-center justify-center h-full">
+        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+      </div>
+    ),
+  }
+);
+
+const AIAssistant = dynamic(
+  () => import("@/components/editor/AIAssistant").then((mod) => mod.AIAssistant),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex items-center justify-center h-full">
+        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+      </div>
+    ),
+  }
+);
+
+const WorldSettingsPanel = dynamic(
+  () => import("@/components/editor/WorldSettingsPanel").then((mod) => mod.WorldSettingsPanel),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex items-center justify-center h-full">
+        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+      </div>
+    ),
+  }
+);
 
 // Tiptap 编辑器懒加载 (带更好的 Loading 骨架屏)
 const TiptapEditor = dynamic(

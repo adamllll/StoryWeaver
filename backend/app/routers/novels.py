@@ -226,9 +226,19 @@ async def list_novels(
     # 获取总数
     total = query.count()
 
-    # 应用分页
+    # 应用分页并预加载关联数据（避免 N+1 查询）
+    from sqlalchemy.orm import joinedload, selectinload
+
     offset = (page - 1) * page_size
-    novels = query.order_by(Novel.updated_at.desc()).offset(offset).limit(page_size).all()
+    novels = (
+        query
+        .options(joinedload(Novel.author))  # 预加载作者信息
+        .options(selectinload(Novel.chapters))  # 预加载章节（用于计算 chapter_count 和 word_count）
+        .order_by(Novel.updated_at.desc())
+        .offset(offset)
+        .limit(page_size)
+        .all()
+    )
 
     # 转换为响应格式
     items = []

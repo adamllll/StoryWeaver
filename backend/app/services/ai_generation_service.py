@@ -431,7 +431,7 @@ class AIGenerationService:
             title_system_prompt = "你是一位擅长起章节标题的小说编辑。"
             title_user_prompt = (
                 f"根据以下章节正文生成一个简洁有创意的标题。\n"
-                f"要求：10-15字以内，不要包含"第{chapter_number}章"，不要添加任何说明。\n\n"
+                f"要求：10-15字以内，不要包含\"第{chapter_number}章\"，不要添加任何说明。\n\n"
                 f"正文：\n{best_body[:1500]}"
             )
 

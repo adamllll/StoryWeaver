@@ -97,7 +97,7 @@ def test_user(db):
     user = User(
         username=f"testuser_{unique_id}",
         email=f"test_{unique_id}@example.com",
-        password_hash=hash_password("password123")
+        password_hash=hash_password("Password123")
     )
     db.add(user)
     db.commit()
@@ -113,7 +113,7 @@ def test_user2(db):
     user = User(
         username=f"testuser2_{unique_id}",
         email=f"test2_{unique_id}@example.com",
-        password_hash=hash_password("password123")
+        password_hash=hash_password("Password123")
     )
     db.add(user)
     db.commit()
@@ -197,11 +197,28 @@ def test_character(db, test_novel):
 
 @pytest.fixture(autouse=True)
 def reset_rate_limiter():
-    """自动重置速率限制器"""
+    """自动重置速率限制器（本小姐的重要修复！）"""
     from app.middleware.rate_limit import ai_rate_limiter
+    from app.utils.rate_limit import limiter as slowapi_limiter
+
+    # 重置 AI 速率限制器
     ai_rate_limiter.requests.clear()
+
+    # 重置 slowapi 速率限制器（本小姐的重要修复：防止 429 错误！）
+    try:
+        # slowapi 使用内部存储,清除它的限制记录
+        slowapi_limiter._storage.storage.clear()
+    except:
+        pass  # 如果存储结构不同,忽略错误
+
     yield
+
+    # 测试后也清理
     ai_rate_limiter.requests.clear()
+    try:
+        slowapi_limiter._storage.storage.clear()
+    except:
+        pass
 
 
 @pytest.fixture
@@ -494,7 +511,7 @@ def admin_user(db):
     user = User(
         username=f"admin_{unique_id}",
         email=f"admin_{unique_id}@example.com",
-        password_hash=hash_password("admin123"),
+        password_hash=hash_password("Admin123"),
         is_admin=True,
         is_active=True
     )

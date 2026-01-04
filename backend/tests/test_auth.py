@@ -14,14 +14,15 @@ class TestRegister:
             json={
                 "username": "newuser",
                 "email": "new@example.com",
-                "password": "password123"
+                "password": "Password123"
             }
         )
         assert response.status_code == status.HTTP_201_CREATED
         data = response.json()
         assert data["username"] == "newuser"
         assert data["email"] == "new@example.com"
-        assert "token" in data
+        # 本小姐的安全设计：Token 通过 httpOnly Cookie 返回，不在响应体中！(￣▽▽￣)ノ
+        assert "access_token" in response.cookies
         assert "password" not in data
 
     def test_register_duplicate_email(self, client, test_user):
@@ -31,7 +32,7 @@ class TestRegister:
             json={
                 "username": "anotheruser",
                 "email": test_user.email,
-                "password": "password123"
+                "password": "Password123"
             }
         )
         assert response.status_code == status.HTTP_400_BAD_REQUEST
@@ -44,7 +45,7 @@ class TestRegister:
             json={
                 "username": test_user.username,
                 "email": "another@example.com",
-                "password": "password123"
+                "password": "Password123"
             }
         )
         assert response.status_code == status.HTTP_400_BAD_REQUEST
@@ -57,7 +58,7 @@ class TestRegister:
             json={
                 "username": "newuser",
                 "email": "invalid-email",
-                "password": "password123"
+                "password": "Password123"
             }
         )
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
@@ -81,7 +82,7 @@ class TestRegister:
             json={
                 "username": "a",
                 "email": "new@example.com",
-                "password": "password123"
+                "password": "Password123"
             }
         )
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
@@ -97,7 +98,7 @@ class TestLogin:
             "/api/auth/login",
             json={
                 "email": test_user.email,
-                "password": "password123",
+                "password": "Password123",
                 "remember_me": False
             }
         )
@@ -105,7 +106,8 @@ class TestLogin:
         data = response.json()
         assert data["username"] == test_user.username
         assert data["email"] == test_user.email
-        assert "token" in data
+        # 本小姐的安全设计：Token 通过 httpOnly Cookie 返回！(￣▽▽￣)ノ
+        assert "access_token" in response.cookies
 
     def test_login_with_remember_me(self, client, test_user):
         """测试记住我登录"""
@@ -113,12 +115,13 @@ class TestLogin:
             "/api/auth/login",
             json={
                 "email": test_user.email,
-                "password": "password123",
+                "password": "Password123",
                 "remember_me": True
             }
         )
         assert response.status_code == status.HTTP_200_OK
-        assert "token" in response.json()
+        # 本小姐的安全设计：Token 通过 httpOnly Cookie 返回！(￣▽▽￣)ノ
+        assert "access_token" in response.cookies
 
     def test_login_wrong_password(self, client, test_user):
         """测试错误密码"""
@@ -139,7 +142,7 @@ class TestLogin:
             "/api/auth/login",
             json={
                 "email": "nonexistent@example.com",
-                "password": "password123",
+                "password": "Password123",
                 "remember_me": False
             }
         )
@@ -152,7 +155,7 @@ class TestLogin:
             "/api/auth/login",
             json={
                 "email": "invalid-email",
-                "password": "password123",
+                "password": "Password123",
                 "remember_me": False
             }
         )
@@ -165,6 +168,8 @@ class TestGetMe:
 
     def test_get_me_success(self, client, test_user, auth_headers):
         """测试成功获取当前用户信息"""
+        # 本小姐的重要修复：清除之前测试留下的 Cookie！(￣▽▽￣)ノ
+        client.cookies.clear()
         response = client.get("/api/auth/me", headers=auth_headers)
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -175,11 +180,15 @@ class TestGetMe:
 
     def test_get_me_without_token(self, client):
         """测试未提供令牌"""
+        # 本小姐的重要修复：清除 Cookie 才能测试"无 token"场景！(￣▽▽￣)ノ
+        client.cookies.clear()
         response = client.get("/api/auth/me")
         assert response.status_code in [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN]
 
     def test_get_me_invalid_token(self, client):
         """测试无效令牌"""
+        # 本小姐的重要修复：清除 Cookie,否则会使用有效的 Cookie！(￣▽▽￣)ノ
+        client.cookies.clear()
         response = client.get(
             "/api/auth/me",
             headers={"Authorization": "Bearer invalid_token"}
@@ -188,6 +197,8 @@ class TestGetMe:
 
     def test_get_me_malformed_header(self, client):
         """测试格式错误的认证头"""
+        # 本小姐的重要修复：清除 Cookie,测试格式错误的 header！(￣▽▽￣)ノ
+        client.cookies.clear()
         response = client.get(
             "/api/auth/me",
             headers={"Authorization": "InvalidFormat"}
@@ -207,17 +218,15 @@ class TestAuthFlow:
             json={
                 "username": "flowuser",
                 "email": "flow@example.com",
-                "password": "password123"
+                "password": "Password123"
             }
         )
         assert register_response.status_code == status.HTTP_201_CREATED
-        register_token = register_response.json()["token"]
+        # 本小姐的安全设计：Token 通过 Cookie 返回！(￣▽▽￣)ノ
+        assert "access_token" in register_response.cookies
 
-        # 2. 使用注册返回的令牌获取信息
-        me_response = client.get(
-            "/api/auth/me",
-            headers={"Authorization": f"Bearer {register_token}"}
-        )
+        # 2. 使用注册返回的 Cookie 获取信息（TestClient 自动维护 Cookie）
+        me_response = client.get("/api/auth/me")
         assert me_response.status_code == status.HTTP_200_OK
         assert me_response.json()["username"] == "flowuser"
 
@@ -226,18 +235,16 @@ class TestAuthFlow:
             "/api/auth/login",
             json={
                 "email": "flow@example.com",
-                "password": "password123",
+                "password": "Password123",
                 "remember_me": False
             }
         )
         assert login_response.status_code == status.HTTP_200_OK
-        login_token = login_response.json()["token"]
+        # 本小姐的安全设计：Token 通过 Cookie 返回！(￣▽▽￣)ノ
+        assert "access_token" in login_response.cookies
 
-        # 4. 使用登录令牌获取信息
-        me_response2 = client.get(
-            "/api/auth/me",
-            headers={"Authorization": f"Bearer {login_token}"}
-        )
+        # 4. 使用登录 Cookie 获取信息（TestClient 自动维护 Cookie）
+        me_response2 = client.get("/api/auth/me")
         assert me_response2.status_code == status.HTTP_200_OK
         assert me_response2.json()["email"] == "flow@example.com"
 
@@ -253,7 +260,7 @@ class TestResetPassword:
             json={
                 "username": test_user.username,
                 "email": test_user.email,
-                "new_password": "newpassword123"
+                "new_password": "NewPassword123"  # 本小姐的安全设计：需要大写字母！(￣▽▽￣)ノ
             }
         )
         assert response.status_code == status.HTTP_200_OK
@@ -264,7 +271,7 @@ class TestResetPassword:
             "/api/auth/login",
             json={
                 "email": test_user.email,
-                "password": "newpassword123",
+                "password": "NewPassword123",
                 "remember_me": False
             }
         )
@@ -277,7 +284,7 @@ class TestResetPassword:
             json={
                 "username": "nonexistent",
                 "email": "nonexistent@example.com",
-                "new_password": "newpassword123"
+                "new_password": "NewPassword123"  # 本小姐的安全设计：需要大写字母！(￣▽▽￣)ノ
             }
         )
         assert response.status_code == status.HTTP_404_NOT_FOUND
@@ -289,7 +296,7 @@ class TestResetPassword:
             json={
                 "username": test_user.username,
                 "email": "wrong@example.com",
-                "new_password": "newpassword123"
+                "new_password": "NewPassword123"  # 本小姐的安全设计：需要大写字母！(￣▽▽￣)ノ
             }
         )
         assert response.status_code == status.HTTP_404_NOT_FOUND

@@ -252,17 +252,16 @@ class TestAIFlow:
             json={
                 "username": f"workflow_user_{unique_id}",
                 "email": f"workflow_{unique_id}@example.com",
-                "password": "password123"
+                "password": "Password123"
             }
         )
         assert register_response.status_code == 201
-        token = register_response.json()["token"]
-        headers = {"Authorization": f"Bearer {token}"}
+        # 本小姐的重要修复：Token 通过 httpOnly Cookie 返回,TestClient 自动维护！(￣▽▽￣)ノ
+        assert "access_token" in register_response.cookies
 
-        # 1. 生成大纲
+        # 1. 生成大纲（不需要手动传 headers,TestClient 自动使用 Cookie）
         outline_response = client.post(
             "/api/ai/outline",
-            headers=headers,
             json={
                 "category": "玄幻",
                 "keywords": "修仙,热血",
@@ -272,10 +271,9 @@ class TestAIFlow:
         )
         assert outline_response.status_code == status.HTTP_200_OK
 
-        # 2. 创建小说
+        # 2. 创建小说（TestClient 自动使用 Cookie）
         novel_response = client.post(
             "/api/novels",
-            headers=headers,
             json={
                 "title": "AI创作小说",
                 "category": "玄幻"
@@ -284,10 +282,9 @@ class TestAIFlow:
         assert novel_response.status_code == status.HTTP_201_CREATED
         novel_id = novel_response.json()["id"]
 
-        # 3. 生成角色
+        # 3. 生成角色（TestClient 自动使用 Cookie）
         character_response = client.post(
             "/api/ai/character",
-            headers=headers,
             json={
                 "novel_id": novel_id,
                 "role_type": "主角"
@@ -295,10 +292,9 @@ class TestAIFlow:
         )
         assert character_response.status_code == status.HTTP_200_OK
 
-        # 4. 续写章节
+        # 4. 续写章节（TestClient 自动使用 Cookie）
         continue_response = client.post(
             "/api/ai/continue",
-            headers=headers,
             json={
                 "novel_id": novel_id,
                 "chapter_outline": "开篇章节，主角登场亮相",
@@ -307,10 +303,9 @@ class TestAIFlow:
         )
         assert continue_response.status_code == status.HTTP_200_OK
 
-        # 5. 扩写文本
+        # 5. 扩写文本（TestClient 自动使用 Cookie）
         expand_response = client.post(
             "/api/ai/expand",
-            headers=headers,
             json={
                 "text": "他走进了房间",
                 "style": "详细描写",

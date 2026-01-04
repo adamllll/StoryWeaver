@@ -31,7 +31,7 @@ class TestGetNovelById:
 
         assert novel is None
 
-    def test_get_novel_with_relations(self, db: Session, test_novel: Novel):
+    def test_get_novel_with_relations(self, db: Session, test_novel: Novel, test_user: User):
         """测试预加载关联数据"""
         service = NovelService(db)
         novel = service.get_novel_by_id(test_novel.id, load_relations=True)
@@ -39,7 +39,7 @@ class TestGetNovelById:
         assert novel is not None
         # 验证关联数据已加载（不会触发额外查询）
         assert novel.author is not None
-        assert novel.author.username == "testuser"
+        assert novel.author.username == test_user.username  # 使用实际的测试用户名
 
 
 @pytest.mark.unit
@@ -202,6 +202,9 @@ class TestListNovels:
         """测试列出所有小说"""
         service = NovelService(db)
 
+        # 查询初始数量
+        _, initial_total = service.list_novels(page=1, page_size=100)
+
         # 创建多个小说
         for i in range(5):
             novel_data = NovelCreate(
@@ -213,12 +216,16 @@ class TestListNovels:
 
         novels, total = service.list_novels(page=1, page_size=10)
 
-        assert total == 5
-        assert len(novels) == 5
+        # 验证增量而不是绝对数量
+        assert total == initial_total + 5
+        assert len(novels) >= 5  # 至少包含新创建的 5 个
 
     def test_list_novels_pagination(self, db: Session, test_user: User):
         """测试分页功能"""
         service = NovelService(db)
+
+        # 查询初始数量
+        _, initial_total = service.list_novels(page=1, page_size=100)
 
         # 创建15个小说
         for i in range(15):
@@ -231,13 +238,13 @@ class TestListNovels:
 
         # 第一页
         novels_page1, total = service.list_novels(page=1, page_size=10)
-        assert total == 15
+        assert total == initial_total + 15
         assert len(novels_page1) == 10
 
         # 第二页
         novels_page2, total = service.list_novels(page=2, page_size=10)
-        assert total == 15
-        assert len(novels_page2) == 5
+        assert total == initial_total + 15
+        assert len(novels_page2) >= 5  # 至少包含新创建的 5 个
 
     def test_list_novels_by_user(self, db: Session, test_user: User):
         """测试按用户筛选"""

@@ -51,6 +51,7 @@ class NovelUpdate(BaseModel):
     outline: Optional[str] = Field(None, max_length=5000)  # 小说大纲
     category: Optional[NOVEL_CATEGORIES] = None
     cover_url: Optional[str] = None
+    status: Optional[str] = Field(None, description="小说状态: draft | published")
 
     @field_validator('description')
     @classmethod

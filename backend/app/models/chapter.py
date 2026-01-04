@@ -1,5 +1,5 @@
 """章节模型 - 故事内容存储"""
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Boolean, Float
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Boolean, Float, Index
 from sqlalchemy.orm import relationship
 from datetime import datetime
 
@@ -47,6 +47,12 @@ class Chapter(Base):
         remote_side=[id],
         back_populates="children",
         foreign_keys=[parent_chapter_id]
+    )
+
+    # 性能优化：复合索引
+    __table_args__ = (
+        Index('idx_novel_order', 'novel_id', 'order_num'),  # 章节列表查询(按顺序)
+        Index('idx_parent_ending', 'parent_chapter_id', 'is_ending'),  # 分支章节查询
     )
 
     @property

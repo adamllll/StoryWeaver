@@ -1,5 +1,5 @@
 """小说模型 - 故事管理"""
-from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, ForeignKey, Index
 from sqlalchemy.orm import relationship
 from datetime import datetime
 
@@ -42,6 +42,13 @@ class Novel(Base):
     )
     world_settings = relationship(
         "WorldSetting", back_populates="novel", cascade="all, delete-orphan"
+    )
+
+    # 性能优化：复合索引
+    __table_args__ = (
+        Index('idx_user_status', 'user_id', 'status'),  # 用户的小说列表查询
+        Index('idx_category_status', 'category', 'status'),  # 分类浏览查询
+        Index('idx_updated_at', 'updated_at'),  # 最新更新排序
     )
 
     @property

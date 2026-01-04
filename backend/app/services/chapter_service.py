@@ -4,13 +4,11 @@
 这个服务封装了所有章节相关的业务逻辑，遵循单一职责原则。
 """
 from typing import Optional, List
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from datetime import datetime
 
 from ..models.chapter import Chapter
-from ..models.novel import Novel
 from ..schemas.chapter import ChapterCreate, ChapterUpdate
-from .novel_service import NovelService
 
 
 class ChapterService:
@@ -18,103 +16,146 @@ class ChapterService:
 
     def __init__(self, db: Session):
         self.db = db
-        self.novel_service = NovelService(db)
 
     def get_chapter_by_id(
         self,
         chapter_id: int,
-        user_id: Optional[int] = None
+        load_relations: bool = False
     ) -> Optional[Chapter]:
         """
-        根据 ID 获取章节
+        根据 ID 获取章节（不包含权限验证）
 
         参数:
             chapter_id: 章节 ID
-            user_id: 用户 ID（用于权限验证）
+            load_relations: 是否预加载关联数据
 
         返回:
-            Chapter 对象，如果不存在或无权限则返回 None
+            Chapter 对象，如果不存在则返回 None
+
+        注意:
+            本方法不进行权限验证，调用方需要自行验证权限
         """
-        chapter = self.db.query(Chapter).filter(Chapter.id == chapter_id).first()
+        query = self.db.query(Chapter).filter(Chapter.id == chapter_id)
 
-        if not chapter:
-            return None
+        if load_relations:
+            query = query.options(
+                joinedload(Chapter.novel),
+                joinedload(Chapter.children),
+            )
 
-        # 权限验证
-        if user_id:
-            novel = chapter.novel
-            if novel.user_id != user_id and novel.status != "published":
-                return None
+        return query.first()
 
-        return chapter
+    def list_chapters(
+        self,
+        novel_id: int,
+        include_branches: bool = False
+    ) -> List[Chapter]:
+        """
+        获取小说的章节列表
+
+        参数:
+            novel_id: 小说 ID
+            include_branches: 是否包含分支章节
+
+        返回:
+            章节列表，按 order_num 排序
+        """
+        query = self.db.query(Chapter).filter(Chapter.novel_id == novel_id)
+
+        if not include_branches:
+            query = query.filter(Chapter.parent_chapter_id.is_(None))
+
+        return query.order_by(Chapter.order_num).all()
+
+    def get_next_order_num(self, novel_id: int) -> float:
+        """
+        获取下一个可用的章节序号
+
+        参数:
+            novel_id: 小说 ID
+
+        返回:
+            下一个可用的序号（主线章节）
+        """
+        max_order = self.db.query(Chapter.order_num).filter(
+            Chapter.novel_id == novel_id,
+            Chapter.parent_chapter_id.is_(None)
+        ).order_by(Chapter.order_num.desc()).first()
+
+        if max_order:
+            return max_order[0] + 1.0
+        return 1.0
 
     def create_chapter(
         self,
-        chapter_data: ChapterCreate,
         novel_id: int,
-        user_id: int
-    ) -> Optional[Chapter]:
+        chapter_data: ChapterCreate
+    ) -> Chapter:
         """
-        创建新章节
+        创建新章节（不包含权限验证）
 
         参数:
-            chapter_data: 章节创建数据
             novel_id: 小说 ID
-            user_id: 用户 ID
+            chapter_data: 章节创建数据
 
         返回:
-            创建的 Chapter 对象，如果无权限则返回 None
-        """
-        # 验证小说权限
-        novel = self.novel_service.get_novel_by_id(novel_id, user_id)
-        if not novel or novel.user_id != user_id:
-            return None
+            创建的 Chapter 对象
 
-        # 获取下一个章节序号
-        max_order = self.db.query(Chapter).filter(
-            Chapter.novel_id == novel_id
-        ).count()
+        注意:
+            本方法不进行权限验证，调用方需要自行验证权限
+        """
+        # 自动计算 order_num
+        if chapter_data.parent_chapter_id:
+            parent = self.get_chapter_by_id(chapter_data.parent_chapter_id)
+            if not parent:
+                raise ValueError(f"父章节不存在: {chapter_data.parent_chapter_id}")
+
+            branch_count = self.db.query(Chapter).filter(
+                Chapter.parent_chapter_id == chapter_data.parent_chapter_id
+            ).count()
+
+            order_num = parent.order_num + (branch_count + 1) * 0.1
+        else:
+            order_num = self.get_next_order_num(novel_id)
 
         chapter = Chapter(
             novel_id=novel_id,
             title=chapter_data.title,
-            content=chapter_data.content,
-            order_num=max_order + 1,
+            content=chapter_data.content or "",
+            order_num=order_num,
             parent_chapter_id=chapter_data.parent_chapter_id,
+            choice_text=chapter_data.choice_text,
         )
 
         self.db.add(chapter)
         self.db.commit()
         self.db.refresh(chapter)
 
-        # 更新小说的缓存计数
-        self.novel_service.update_cached_counts(novel_id)
-
         return chapter
 
     def update_chapter(
         self,
         chapter_id: int,
-        chapter_data: ChapterUpdate,
-        user_id: int
+        chapter_data: ChapterUpdate
     ) -> Optional[Chapter]:
         """
-        更新章节
+        更新章节（不包含权限验证）
 
         参数:
             chapter_id: 章节 ID
             chapter_data: 更新数据
-            user_id: 用户 ID
 
         返回:
-            更新后的 Chapter 对象，如果不存在或无权限则返回 None
-        """
-        chapter = self.get_chapter_by_id(chapter_id, user_id)
+            更新后的 Chapter 对象，如果不存在则返回 None
 
-        if not chapter or chapter.novel.user_id != user_id:
+        注意:
+            本方法不进行权限验证，调用方需要自行验证权限
+        """
+        chapter = self.get_chapter_by_id(chapter_id)
+
+        if not chapter:
             return None
 
-        # 更新字段
         update_data = chapter_data.dict(exclude_unset=True)
         for field, value in update_data.items():
             setattr(chapter, field, value)
@@ -124,103 +165,94 @@ class ChapterService:
         self.db.commit()
         self.db.refresh(chapter)
 
-        # 如果内容改变，更新小说的缓存字数
-        if 'content' in update_data:
-            self.novel_service.update_cached_counts(chapter.novel_id)
-
         return chapter
 
-    def delete_chapter(
-        self,
-        chapter_id: int,
-        user_id: int
-    ) -> bool:
+    def delete_chapter(self, chapter_id: int) -> bool:
         """
-        删除章节
+        删除章节（不包含权限验证）
 
         参数:
             chapter_id: 章节 ID
-            user_id: 用户 ID
 
         返回:
-            True 如果删除成功
+            True 如果删除成功，False 如果章节不存在
+
+        注意:
+            本方法不进行权限验证，调用方需要自行验证权限
+            删除章节会级联删除其所有分支章节
         """
-        chapter = self.get_chapter_by_id(chapter_id, user_id)
+        chapter = self.get_chapter_by_id(chapter_id)
 
-        if not chapter or chapter.novel.user_id != user_id:
+        if not chapter:
             return False
-
-        novel_id = chapter.novel_id
 
         self.db.delete(chapter)
         self.db.commit()
 
-        # 更新小说的缓存计数
-        self.novel_service.update_cached_counts(novel_id)
-
         return True
-
-    def list_chapters(
-        self,
-        novel_id: int,
-        user_id: Optional[int] = None
-    ) -> List[Chapter]:
-        """
-        获取小说的所有章节
-
-        参数:
-            novel_id: 小说 ID
-            user_id: 用户 ID（用于权限验证）
-
-        返回:
-            章节列表
-        """
-        # 验证小说权限
-        novel = self.novel_service.get_novel_by_id(novel_id, user_id)
-        if not novel:
-            return []
-
-        chapters = (
-            self.db.query(Chapter)
-            .filter(Chapter.novel_id == novel_id)
-            .order_by(Chapter.order_num)
-            .all()
-        )
-
-        return chapters
 
     def reorder_chapters(
         self,
         novel_id: int,
-        chapter_orders: List[tuple[int, int]],  # [(chapter_id, new_order), ...]
-        user_id: int
-    ) -> bool:
+        chapter_ids: List[int]
+    ) -> List[Chapter]:
         """
-        重新排序章节
+        批量重排章节顺序（不包含权限验证）
 
         参数:
             novel_id: 小说 ID
-            chapter_orders: 章节 ID 和新序号的列表
-            user_id: 用户 ID
+            chapter_ids: 章节 ID 列表（按新顺序排列）
 
         返回:
-            True 如果成功
+            重排后的章节列表
+
+        注意:
+            本方法不进行权限验证，调用方需要自行验证权限
+            只能重排主线章节（没有父章节的章节）
         """
-        # 验证小说权限
-        novel = self.novel_service.get_novel_by_id(novel_id, user_id)
-        if not novel or novel.user_id != user_id:
-            return False
-
-        # 更新章节序号
-        for chapter_id, new_order in chapter_orders:
-            chapter = self.db.query(Chapter).filter(
-                Chapter.id == chapter_id,
-                Chapter.novel_id == novel_id
-            ).first()
-
-            if chapter:
-                chapter.order_num = new_order
+        chapters = []
+        for index, chapter_id in enumerate(chapter_ids, start=1):
+            chapter = self.get_chapter_by_id(chapter_id)
+            if chapter and chapter.novel_id == novel_id and not chapter.parent_chapter_id:
+                chapter.order_num = float(index)
+                chapters.append(chapter)
 
         self.db.commit()
 
-        return True
+        for chapter in chapters:
+            self.db.refresh(chapter)
+
+        return chapters
+
+    def get_chapter_navigation(
+        self,
+        chapter_id: int
+    ) -> tuple[Optional[int], Optional[int]]:
+        """
+        获取章节的上下文导航信息
+
+        参数:
+            chapter_id: 章节 ID
+
+        返回:
+            (prev_chapter_id, next_chapter_id) 元组
+        """
+        chapter = self.get_chapter_by_id(chapter_id)
+        if not chapter:
+            return None, None
+
+        chapters = self.list_chapters(chapter.novel_id, include_branches=False)
+
+        current_index = None
+        for i, ch in enumerate(chapters):
+            if ch.id == chapter_id:
+                current_index = i
+                break
+
+        if current_index is None:
+            return None, None
+
+        prev_chapter_id = chapters[current_index - 1].id if current_index > 0 else None
+        next_chapter_id = chapters[current_index + 1].id if current_index < len(chapters) - 1 else None
+
+        return prev_chapter_id, next_chapter_id

@@ -21,19 +21,20 @@ class NovelService:
     def get_novel_by_id(
         self,
         novel_id: int,
-        user_id: Optional[int] = None,
         load_relations: bool = False
     ) -> Optional[Novel]:
         """
-        根据 ID 获取小说
+        根据 ID 获取小说（不包含权限验证）
 
         参数:
             novel_id: 小说 ID
-            user_id: 用户 ID（用于权限验证）
             load_relations: 是否预加载关联数据
 
         返回:
             Novel 对象，如果不存在则返回 None
+
+        注意:
+            本方法不进行权限验证，调用方需要自行验证权限
         """
         query = self.db.query(Novel).filter(Novel.id == novel_id)
 
@@ -45,14 +46,7 @@ class NovelService:
                 selectinload(Novel.characters),
             )
 
-        novel = query.first()
-
-        # 权限验证
-        if novel and user_id:
-            if novel.user_id != user_id and novel.status != "published":
-                return None  # 非作者且未发布，无权访问
-
-        return novel
+        return query.first()
 
     def create_novel(
         self,
@@ -90,23 +84,24 @@ class NovelService:
     def update_novel(
         self,
         novel_id: int,
-        novel_data: NovelUpdate,
-        user_id: int
+        novel_data: NovelUpdate
     ) -> Optional[Novel]:
         """
-        更新小说
+        更新小说（不包含权限验证）
 
         参数:
             novel_id: 小说 ID
             novel_data: 更新数据
-            user_id: 用户 ID
 
         返回:
-            更新后的 Novel 对象，如果不存在或无权限则返回 None
-        """
-        novel = self.get_novel_by_id(novel_id, user_id)
+            更新后的 Novel 对象，如果不存在则返回 None
 
-        if not novel or novel.user_id != user_id:
+        注意:
+            本方法不进行权限验证，调用方需要自行验证权限
+        """
+        novel = self.get_novel_by_id(novel_id)
+
+        if not novel:
             return None
 
         # 更新字段
@@ -124,23 +119,24 @@ class NovelService:
     def delete_novel(
         self,
         novel_id: int,
-        user_id: int,
         soft_delete: bool = True
     ) -> bool:
         """
-        删除小说
+        删除小说（不包含权限验证）
 
         参数:
             novel_id: 小说 ID
-            user_id: 用户 ID
             soft_delete: 是否软删除
 
         返回:
-            True 如果删除成功
-        """
-        novel = self.get_novel_by_id(novel_id, user_id)
+            True 如果删除成功，False 如果小说不存在
 
-        if not novel or novel.user_id != user_id:
+        注意:
+            本方法不进行权限验证，调用方需要自行验证权限
+        """
+        novel = self.get_novel_by_id(novel_id)
+
+        if not novel:
             return False
 
         if soft_delete:

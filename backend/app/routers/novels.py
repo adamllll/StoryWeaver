@@ -20,6 +20,7 @@ from ..schemas import (
 )
 from ..utils.auth import get_current_user, get_optional_user
 from ..utils.outline_parser import extract_characters_from_outline
+from ..services import NovelService
 
 router = APIRouter(prefix="/novels", tags=["小说"])
 
@@ -201,43 +202,24 @@ async def list_novels(
     返回:
         分页的小说列表及总数
     """
-    query = db.query(Novel)
+    service = NovelService(db)
 
-    # 应用筛选条件
-    if category:
-        query = query.filter(Novel.category == category)
+    # 处理状态筛选逻辑
+    effective_status = status
+    if not status and not user_id:
+        # 默认只显示已发布的小说
+        effective_status = "published"
+    elif user_id and current_user and current_user.id != user_id:
+        # 查看其他用户的小说，只显示已发布的
+        effective_status = "published"
 
-    if status:
-        query = query.filter(Novel.status == status)
-    else:
-        # 默认只显示已发布的小说，除非按作者筛选
-        if not user_id:
-            query = query.filter(Novel.status == "published")
-
-    if user_id:
-        query = query.filter(Novel.user_id == user_id)
-        # 如果是查看自己的小说，显示所有状态
-        if current_user and current_user.id == user_id:
-            pass  # 不添加额外筛选
-        else:
-            # 只显示其他用户已发布的小说
-            query = query.filter(Novel.status == "published")
-
-    # 获取总数
-    total = query.count()
-
-    # 应用分页并预加载关联数据（避免 N+1 查询）
-    from sqlalchemy.orm import joinedload, selectinload
-
-    offset = (page - 1) * page_size
-    novels = (
-        query
-        .options(joinedload(Novel.author))  # 预加载作者信息
-        .options(selectinload(Novel.chapters))  # 预加载章节（用于计算 chapter_count 和 word_count）
-        .order_by(Novel.updated_at.desc())
-        .offset(offset)
-        .limit(page_size)
-        .all()
+    # 使用 Service 层获取小说列表
+    novels, total = service.list_novels(
+        user_id=user_id,
+        category=category,
+        status=effective_status,
+        page=page,
+        page_size=page_size
     )
 
     # 转换为响应格式
@@ -296,18 +278,10 @@ async def create_novel(
         如果提供了大纲(outline)，系统会自动从大纲中提取第一章信息并生成第一章内容。
         生成过程可能需要 5-15 秒，请耐心等待。
     """
-    novel = Novel(
-        user_id=current_user.id,
-        title=novel_data.title,
-        description=novel_data.description,
-        outline=novel_data.outline,  # ✅ 保存AI生成的大纲
-        category=novel_data.category,
-        cover_url=novel_data.cover_url,
-        status="draft",
-    )
-    db.add(novel)
-    db.commit()
-    db.refresh(novel)
+    service = NovelService(db)
+
+    # 使用 Service 层创建小说
+    novel = service.create_novel(novel_data, current_user.id)
 
     # 🆕 如果有大纲，提取并创建角色
     if novel.outline:
@@ -360,14 +334,18 @@ async def get_novel(
     异常:
         HTTPException: 小说不存在或无权访问时抛出
     """
-    novel = db.query(Novel).filter(Novel.id == novel_id).first()
+    service = NovelService(db)
+
+    # 使用 Service 层获取小说（不包含权限验证）
+    novel = service.get_novel_by_id(novel_id, load_relations=True)
+
     if not novel:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"未找到ID为 {novel_id} 的小说",
         )
 
-    # 检查访问权限
+    # 路由层权限验证：游客只能访问已发布的小说
     is_owner = current_user and current_user.id == novel.user_id
     if novel.status != "published" and not is_owner:
         raise HTTPException(
@@ -400,26 +378,25 @@ async def update_novel(
     异常:
         HTTPException: 小说不存在或非作者时抛出
     """
-    novel = db.query(Novel).filter(Novel.id == novel_id).first()
+    service = NovelService(db)
+
+    # 先获取小说
+    novel = service.get_novel_by_id(novel_id)
     if not novel:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"未找到ID为 {novel_id} 的小说",
         )
 
+    # 路由层权限验证
     if novel.user_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="您没有权限编辑此小说",
         )
 
-    # 更新提供的字段
-    update_data = novel_data.model_dump(exclude_unset=True)
-    for field, value in update_data.items():
-        setattr(novel, field, value)
-
-    db.commit()
-    db.refresh(novel)
+    # 使用 Service 层更新小说
+    novel = service.update_novel(novel_id, novel_data)
 
     return _novel_to_detail(novel)
 
@@ -446,23 +423,27 @@ async def publish_novel(
     异常:
         HTTPException: 小说不存在或非作者时抛出
     """
-    novel = db.query(Novel).filter(Novel.id == novel_id).first()
+    service = NovelService(db)
+
+    # 先获取小说
+    novel = service.get_novel_by_id(novel_id)
     if not novel:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"未找到ID为 {novel_id} 的小说",
         )
 
+    # 路由层权限验证
     if novel.user_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="您没有权限发布此小说",
         )
 
-    # 根据布尔值设置状态
-    novel.status = "published" if publish_data.publish else "draft"
-    db.commit()
-    db.refresh(novel)
+    # 使用 Service 层更新状态
+    from ..schemas.novel import NovelUpdate
+    update_data = NovelUpdate(status="published" if publish_data.publish else "draft")
+    novel = service.update_novel(novel_id, update_data)
 
     return _novel_to_detail(novel)
 
@@ -484,21 +465,31 @@ async def delete_novel(
     异常:
         HTTPException: 小说不存在或非作者时抛出
     """
-    novel = db.query(Novel).filter(Novel.id == novel_id).first()
+    service = NovelService(db)
+
+    # 先获取小说
+    novel = service.get_novel_by_id(novel_id)
     if not novel:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"未找到ID为 {novel_id} 的小说",
         )
 
+    # 路由层权限验证
     if novel.user_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="您没有权限删除此小说",
         )
 
-    db.delete(novel)
-    db.commit()
+    # 使用 Service 层删除小说（硬删除）
+    success = service.delete_novel(novel_id, soft_delete=False)
+
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="删除小说失败",
+        )
 
 
 def _novel_to_detail(novel: Novel) -> NovelDetail:

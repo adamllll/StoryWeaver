@@ -103,9 +103,7 @@ describe('apiClient', () => {
       await expect(apiClient.get('/novels/999')).rejects.toThrow('Novel not found');
     });
 
-    it('should include Authorization header when token exists', async () => {
-      localStorage.setItem('token', 'test-token');
-
+    it('should include credentials for cookie-based auth', async () => {
       (global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
         status: 200,
@@ -114,12 +112,11 @@ describe('apiClient', () => {
 
       await apiClient.get('/novels');
 
+      // 验证使用 credentials: "include" 携带 httpOnly Cookie
       expect(global.fetch).toHaveBeenCalledWith(
         expect.any(String),
         expect.objectContaining({
-          headers: expect.objectContaining({
-            Authorization: 'Bearer test-token',
-          }),
+          credentials: 'include',
         })
       );
     });
@@ -227,7 +224,7 @@ describe('authApi', () => {
   });
 
   it('should get current user info', async () => {
-    localStorage.setItem('token', 'test-token');
+    // 不再需要 localStorage，认证通过 httpOnly Cookie 自动管理
     const mockUser = {
       id: 1,
       username: 'testuser',

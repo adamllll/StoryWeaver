@@ -1,10 +1,13 @@
 /**
  * Zustand Store 单元测试
  * 测试 lib/store.ts 中的全局状态管理
+ *
+ * 注意：认证系统已迁移到 httpOnly Cookie 方式，
+ * Token 由后端自动管理，前端不再手动调用 setToken/removeToken
  */
 
 import { useAuthStore, useEditorStore, useUIStore } from '@/lib/store';
-import { authApi, setToken, removeToken } from '@/lib/api';
+import { authApi } from '@/lib/api';
 
 // Mock API 模块
 jest.mock('@/lib/api', () => ({
@@ -13,8 +16,6 @@ jest.mock('@/lib/api', () => ({
     register: jest.fn(),
     me: jest.fn(),
   },
-  setToken: jest.fn(),
-  removeToken: jest.fn(),
 }));
 
 describe('useAuthStore', () => {
@@ -99,20 +100,29 @@ describe('useAuthStore', () => {
       expect(state.isLoading).toBe(false);
     });
 
-    it('should call setToken with rememberMe flag', async () => {
+    it('should pass rememberMe flag to API', async () => {
       (authApi.login as jest.Mock).mockResolvedValue(mockLoginResponse);
 
       await useAuthStore.getState().login('test@example.com', 'password', true);
 
-      expect(setToken).toHaveBeenCalledWith('test-token', true);
+      // 验证 API 被正确调用，包含 remember_me 参数
+      expect(authApi.login).toHaveBeenCalledWith({
+        email: 'test@example.com',
+        password: 'password',
+        remember_me: true,
+      });
     });
 
-    it('should call setToken with rememberMe=false', async () => {
+    it('should pass rememberMe=false to API', async () => {
       (authApi.login as jest.Mock).mockResolvedValue(mockLoginResponse);
 
       await useAuthStore.getState().login('test@example.com', 'password', false);
 
-      expect(setToken).toHaveBeenCalledWith('test-token', false);
+      expect(authApi.login).toHaveBeenCalledWith({
+        email: 'test@example.com',
+        password: 'password',
+        remember_me: false,
+      });
     });
 
     it('should throw and reset isLoading on error', async () => {
@@ -149,12 +159,17 @@ describe('useAuthStore', () => {
       expect(state.isLoading).toBe(false);
     });
 
-    it('should call setToken on successful registration', async () => {
+    it('should call register API with correct parameters', async () => {
       (authApi.register as jest.Mock).mockResolvedValue(mockRegisterResponse);
 
       await useAuthStore.getState().register('newuser', 'new@example.com', 'password');
 
-      expect(setToken).toHaveBeenCalledWith('new-token');
+      // 验证 API 被正确调用
+      expect(authApi.register).toHaveBeenCalledWith({
+        username: 'newuser',
+        email: 'new@example.com',
+        password: 'password',
+      });
     });
 
     it('should throw and reset isLoading on error', async () => {
@@ -171,7 +186,7 @@ describe('useAuthStore', () => {
   });
 
   describe('logout', () => {
-    it('should clear user and call removeToken', () => {
+    it('should clear user state (Cookie managed by backend)', () => {
       // 先设置登录状态
       useAuthStore.setState({
         user: { id: 1, username: 'test' } as any,
@@ -185,7 +200,7 @@ describe('useAuthStore', () => {
       expect(state.user).toBeNull();
       expect(state.isAuthenticated).toBe(false);
       expect(state.isInitialized).toBe(true);
-      expect(removeToken).toHaveBeenCalled();
+      // 注意：httpOnly Cookie 由后端管理，前端 logout 只清除状态
     });
   });
 
@@ -203,7 +218,7 @@ describe('useAuthStore', () => {
       expect(state.isLoading).toBe(false);
     });
 
-    it('should clear state and token on failed auth check', async () => {
+    it('should clear state on failed auth check (Cookie expires naturally)', async () => {
       (authApi.me as jest.Mock).mockRejectedValue(new Error('Unauthorized'));
 
       await useAuthStore.getState().checkAuth();
@@ -213,7 +228,7 @@ describe('useAuthStore', () => {
       expect(state.isAuthenticated).toBe(false);
       expect(state.isInitialized).toBe(true);
       expect(state.isLoading).toBe(false);
-      expect(removeToken).toHaveBeenCalled();
+      // 注意：httpOnly Cookie 会自动过期，前端只需清除状态
     });
   });
 });

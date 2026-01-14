@@ -19,7 +19,7 @@
 
 | 层级 | 技术 |
 |------|------|
-| **后端** | Python 3.12 / FastAPI / SQLAlchemy / SQLite / JWT |
+| **后端** | Python 3.12 / FastAPI / SQLAlchemy / SQLite / httpOnly Cookie + JWT |
 | **前端** | Next.js 14 / TypeScript / Tailwind CSS / shadcn/ui |
 | **AI** | OpenAI API / Claude API（可选）|
 | **部署** | Docker / GitHub Actions CI/CD |
@@ -159,13 +159,15 @@ StoryWeaver/
 
 | 模块 | 功能 |
 |------|------|
-| **认证系统** | 用户注册/登录、JWT 认证、安全密码哈希 |
+| **认证系统** | 用户注册/登录、httpOnly Cookie + JWT、安全密码哈希 (Argon2) |
 | **小说管理** | CRUD、发布、分类、封面 |
 | **章节系统** | 创建/编辑/删除、拖拽排序、富文本编辑 |
 | **AI 创作** | 大纲生成、章节续写、一键扩写、格式优化 |
 | **互动系统** | 分支选项、AI 动态生成、分支树可视化 |
 | **冒险模式** | 文字冒险游戏、存档分叉、多结局 |
 | **角色管理** | 角色设定、世界观配置 |
+| **单元测试** | 168+ 测试用例、Service 层架构优化、高覆盖率 |
+| **性能优化** | 数据库复合索引、API 速率限制 (slowapi) |
 | **容器化** | Docker 部署、CI/CD 流水线、数据库备份 |
 
 ### 进行中 🔄
@@ -173,7 +175,6 @@ StoryWeaver/
 - [ ] 一致性审校（检测剧情冲突）
 - [ ] 导出功能（TXT/PDF）
 - [ ] 阅读统计仪表盘
-- [ ] E2E 测试覆盖
 
 ## 📡 API 端点
 
@@ -209,8 +210,9 @@ npm run test:coverage
 - [ ] 修改 `JWT_SECRET_KEY`（至少 32 位随机字符）
 - [ ] 设置 `DEBUG=false`
 - [ ] 配置正确的 `FRONTEND_URL`（CORS 白名单）
-- [ ] 使用 HTTPS
+- [ ] 使用 HTTPS（保护 httpOnly Cookie）
 - [ ] 设置数据库文件权限
+- [ ] 配置 API 速率限制参数
 
 ## 📦 数据库备份
 
@@ -237,4 +239,4 @@ crontab -e
 
 ---
 
-**最后更新**: 2025-12-26 | **项目状态**: MVP 完成，持续优化中
+**最后更新**: 2026-01-10 | **项目状态**: MVP 完成，持续优化中

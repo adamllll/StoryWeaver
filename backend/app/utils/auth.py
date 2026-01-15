@@ -1,5 +1,5 @@
 """JWT 认证工具"""
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from jose import jwt, JWTError
@@ -45,11 +45,11 @@ def create_token(user_id: int, remember_me: bool = False) -> str:
     """
     # 记住我：30天，否则：1天
     expire_days = 30 if remember_me else 1
-    expire = datetime.utcnow() + timedelta(days=expire_days)
+    expire = datetime.now(timezone.utc) + timedelta(days=expire_days)
     payload = {
         "sub": str(user_id),
         "exp": expire,
-        "iat": datetime.utcnow(),
+        "iat": datetime.now(timezone.utc),
     }
     return jwt.encode(
         payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM
@@ -73,9 +73,11 @@ def decode_token(token: str) -> int:
         payload = jwt.decode(
             token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM]
         )
-        user_id = int(payload.get("sub"))
-        return user_id
-    except JWTError:
+        user_id_raw = payload.get("sub")
+        if not user_id_raw:
+            raise ValueError("missing sub")
+        return int(user_id_raw)
+    except (JWTError, ValueError, TypeError):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="令牌无效或已过期",

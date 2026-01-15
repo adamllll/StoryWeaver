@@ -8,12 +8,12 @@ import warnings
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
+from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from .config import settings
 from .database import engine, Base, init_db
+from .utils.rate_limit import limiter as rate_limiter
 from .routers import (
     auth_router,
     novels_router,
@@ -82,8 +82,7 @@ app = FastAPI(
 
 # 配置速率限制 (Rate Limiting)
 # 本小姐的安全防护：防止暴力破解和 DDoS 攻击！(￣▽￣)ノ
-limiter = Limiter(key_func=get_remote_address)
-app.state.limiter = limiter
+app.state.limiter = rate_limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # 配置跨域资源共享 (CORS)

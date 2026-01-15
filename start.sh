@@ -125,7 +125,7 @@ cd frontend
 # 检查 .env.local 文件
 if [ ! -f .env.local ]; then
     log_warning ".env.local 文件不存在，正在从 .env.example 复制..."
-    cp .env.example .env.local 2>/dev/null || echo "NEXT_PUBLIC_API_URL=http://localhost:8000" > .env.local
+    cp .env.example .env.local 2>/dev/null || echo "NEXT_PUBLIC_API_URL=http://localhost:8000/api" > .env.local
     log_success ".env.local 文件创建完成"
 fi
 

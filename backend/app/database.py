@@ -113,6 +113,9 @@ def _create_default_admin():
         # 检查管理员是否已存在
         existing = db.query(User).filter(User.username == admin_username).first()
         if not existing:
+            if not settings.DEBUG and admin_password == "admin123":
+                print("[WARN] 生产环境未设置 ADMIN_PASSWORD，已跳过默认管理员创建")
+                return
             admin = User(
                 username=admin_username,
                 email=admin_email,

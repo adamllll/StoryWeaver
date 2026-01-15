@@ -14,6 +14,7 @@ jest.mock('@/lib/api', () => ({
   authApi: {
     login: jest.fn(),
     register: jest.fn(),
+    logout: jest.fn(),
     me: jest.fn(),
   },
 }));
@@ -200,6 +201,7 @@ describe('useAuthStore', () => {
       expect(state.user).toBeNull();
       expect(state.isAuthenticated).toBe(false);
       expect(state.isInitialized).toBe(true);
+      expect(authApi.logout).toHaveBeenCalledTimes(1);
       // 注意：httpOnly Cookie 由后端管理，前端 logout 只清除状态
     });
   });

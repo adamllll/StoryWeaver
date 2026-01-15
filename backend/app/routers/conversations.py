@@ -11,7 +11,7 @@ Conversations API 路由 - AI 对话历史持久化
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from pydantic import BaseModel, Field
 
 from ..database import get_db
@@ -130,7 +130,7 @@ async def save_or_update_conversation(
     if conversation:
         # 3. 更新现有记录
         conversation.messages = request.messages
-        conversation.updated_at = datetime.utcnow()
+        conversation.updated_at = datetime.now(timezone.utc)
     else:
         # 4. 创建新记录
         conversation = AIConversation(
@@ -290,7 +290,7 @@ async def update_standalone_conversation(
         )
 
     conversation.messages = request.messages
-    conversation.updated_at = datetime.utcnow()
+    conversation.updated_at = datetime.now(timezone.utc)
 
     db.commit()
     db.refresh(conversation)
@@ -355,7 +355,7 @@ async def link_conversation_to_adventure(
 
     # 关联对话到冒险
     conversation.adventure_id = adventure_id
-    conversation.updated_at = datetime.utcnow()
+    conversation.updated_at = datetime.now(timezone.utc)
 
     db.commit()
 

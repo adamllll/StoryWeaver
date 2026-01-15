@@ -5,7 +5,7 @@
 """
 from typing import Optional, List
 from sqlalchemy.orm import Session, joinedload
-from datetime import datetime
+from datetime import datetime, timezone
 
 from ..models.chapter import Chapter
 from ..schemas.chapter import ChapterCreate, ChapterUpdate
@@ -156,11 +156,11 @@ class ChapterService:
         if not chapter:
             return None
 
-        update_data = chapter_data.dict(exclude_unset=True)
+        update_data = chapter_data.model_dump(exclude_unset=True)
         for field, value in update_data.items():
             setattr(chapter, field, value)
 
-        chapter.updated_at = datetime.utcnow()
+        chapter.updated_at = datetime.now(timezone.utc)
 
         self.db.commit()
         self.db.refresh(chapter)

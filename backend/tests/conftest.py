@@ -1,7 +1,11 @@
 """简化的测试配置和fixtures"""
+import asyncio
+import json
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+
 import pytest
+import httpx
 from fastapi import FastAPI
-from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
@@ -69,10 +73,137 @@ def test_app():
     return app
 
 
+@pytest.fixture(scope="session", autouse=True)
+def disable_anyio_threadpool():
+    """测试环境禁用 anyio 线程池，避免跨线程调度问题"""
+    from anyio import to_thread
+
+    original_run_sync = to_thread.run_sync
+
+    async def run_sync(func, *args, cancellable=False, limiter=None):
+        return func(*args)
+
+    to_thread.run_sync = run_sync
+    yield
+    to_thread.run_sync = original_run_sync
+
+
+class LocalASGIClient:
+    """同步 ASGI 客户端（不依赖 TestClient 的跨线程调度）"""
+
+    def __init__(self, app: FastAPI, base_url: str = "http://testserver"):
+        self.app = app
+        self.base_url = base_url
+        self.cookies = httpx.Cookies()
+
+    def request(self, method: str, url: str, headers=None, json_data=None, params=None, follow_redirects: bool = True):
+        headers = headers.copy() if headers else {}
+
+        if params:
+            url_parts = urlsplit(url)
+            query = urlencode(params, doseq=True)
+            url = urlunsplit(("", "", url_parts.path, query, ""))
+
+        full_url = f"{self.base_url}{url}" if not url.startswith("http") else url
+
+        body = b""
+        if json_data is not None:
+            body = json.dumps(json_data).encode("utf-8")
+            headers.setdefault("content-type", "application/json")
+
+        if self.cookies:
+            cookie_header = "; ".join([f"{k}={v}" for k, v in self.cookies.items()])
+            if cookie_header:
+                headers.setdefault("cookie", cookie_header)
+
+        asgi_headers = [(k.lower().encode(), v.encode()) for k, v in headers.items()]
+
+        response = asyncio.run(self._call_app(method, full_url, asgi_headers, body))
+        request = httpx.Request(method, full_url, headers=headers, content=body)
+        response.request = request
+        self.cookies.extract_cookies(response)
+
+        if follow_redirects and response.status_code in {301, 302, 303, 307, 308}:
+            location = response.headers.get("location")
+            if location:
+                redirect_method = "GET" if response.status_code == 303 else method
+                return self.request(redirect_method, location, headers=headers, json_data=json_data, params=params, follow_redirects=False)
+
+        return response
+
+    async def _call_app(self, method: str, url: str, headers, body: bytes) -> httpx.Response:
+        messages = []
+        url_parts = urlsplit(url)
+        path = url_parts.path or "/"
+        query_string = b""
+        if url_parts.query:
+            query_pairs = parse_qsl(url_parts.query, keep_blank_values=True)
+            query_string = urlencode(query_pairs, doseq=True).encode()
+
+        scope = {
+            "type": "http",
+            "http_version": "1.1",
+            "method": method,
+            "scheme": url_parts.scheme,
+            "path": path,
+            "raw_path": path.encode(),
+            "query_string": query_string,
+            "headers": headers,
+            "client": ("testclient", 50000),
+            "server": (url_parts.hostname or "testserver", url_parts.port or 80),
+        }
+
+        body_sent = False
+
+        async def receive():
+            nonlocal body_sent
+            if body_sent:
+                return {"type": "http.disconnect"}
+            body_sent = True
+            return {"type": "http.request", "body": body, "more_body": False}
+
+        async def send(message):
+            messages.append(message)
+
+        await self.app(scope, receive, send)
+
+        status_code = 500
+        response_headers = []
+        body_chunks = []
+        for message in messages:
+            if message["type"] == "http.response.start":
+                status_code = message["status"]
+                response_headers = message.get("headers", [])
+            elif message["type"] == "http.response.body":
+                body_chunks.append(message.get("body", b""))
+
+        response_body = b"".join(body_chunks)
+        return httpx.Response(
+            status_code,
+            headers=[(k.decode(), v.decode()) for k, v in response_headers],
+            content=response_body,
+        )
+
+    def get(self, url, **kwargs):
+        return self.request("GET", url, headers=kwargs.get("headers"), params=kwargs.get("params"))
+
+    def post(self, url, **kwargs):
+        return self.request("POST", url, headers=kwargs.get("headers"), json_data=kwargs.get("json"), params=kwargs.get("params"))
+
+    def put(self, url, **kwargs):
+        return self.request("PUT", url, headers=kwargs.get("headers"), json_data=kwargs.get("json"), params=kwargs.get("params"))
+
+    def patch(self, url, **kwargs):
+        return self.request("PATCH", url, headers=kwargs.get("headers"), json_data=kwargs.get("json"), params=kwargs.get("params"))
+
+    def delete(self, url, **kwargs):
+        return self.request("DELETE", url, headers=kwargs.get("headers"), json_data=kwargs.get("json"), params=kwargs.get("params"))
+
+
 @pytest.fixture(scope="module")
 def client(test_app):
     """创建测试客户端"""
-    return TestClient(test_app)
+    return LocalASGIClient(test_app)
 
 
 @pytest.fixture(scope="function")

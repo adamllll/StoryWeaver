@@ -1,7 +1,7 @@
 """章节路由 - 小说章节的增删改查操作"""
 import json
 from typing import List
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -374,7 +374,7 @@ async def select_choice(
         "chapter_id": chapter_id,
         "choice_id": choice.choice_id,
         "choice_text": next_chapter.choice_text or f"选项 {choice.choice_id + 1}",
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat()
     })
     progress.choices_made = json.dumps(choices_history, ensure_ascii=False)
 

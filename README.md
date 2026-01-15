@@ -106,7 +106,7 @@ cd frontend
 npm install
 
 # 配置环境变量
-echo "NEXT_PUBLIC_API_URL=http://localhost:8000" > .env.local
+echo "NEXT_PUBLIC_API_URL=http://localhost:8000/api" > .env.local
 
 # 启动开发服务器
 npm run dev

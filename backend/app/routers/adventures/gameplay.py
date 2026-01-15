@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 from ...database import get_db
 from ...models import User, Adventure, StoryNode, PlayerChoice
@@ -291,7 +291,7 @@ async def make_choice(
     if game_over:
         adventure.is_finished = True
         adventure.final_ending = "game_over"
-        adventure.finished_at = datetime.utcnow()
+        adventure.finished_at = datetime.now(timezone.utc)
 
     db.commit()
     db.refresh(new_node)
@@ -422,7 +422,7 @@ async def finish_adventure(
     # 标记为完成
     adventure.is_finished = True
     adventure.final_ending = request.ending_type
-    adventure.finished_at = datetime.utcnow()
+    adventure.finished_at = datetime.now(timezone.utc)
 
     db.commit()
 

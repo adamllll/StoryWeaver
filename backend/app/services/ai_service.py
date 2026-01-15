@@ -298,8 +298,8 @@ class AIService:
             fixed = fixed[json_start:]
 
         # 2. 替换中文引号（在其他处理之前）
-        fixed = fixed.replace('"', '"').replace('"', '"')
-        fixed = fixed.replace(''', "'").replace(''', "'")
+        fixed = fixed.replace("“", '"').replace("”", '"')
+        fixed = fixed.replace("‘", "'").replace("’", "'")
 
         # 3. 修复单引号属性名（将 'key': 替换为 "key":）
         fixed = re.sub(r"'([^']+)'(\s*):", r'"\1"\2:', fixed)

@@ -2,7 +2,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, or_
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from pathlib import Path
 import math
@@ -221,7 +221,7 @@ async def delete_user(
         if admin_count <= 1:
             raise HTTPException(status_code=400, detail="不能删除最后一个管理员")
 
-    user.deleted_at = datetime.utcnow()
+    user.deleted_at = datetime.now(timezone.utc)
     user.is_active = False
     db.commit()
     db.refresh(user)
@@ -317,7 +317,7 @@ async def delete_novel(
     if novel.deleted_at is not None:
         raise HTTPException(status_code=400, detail="小说已被删除")
 
-    novel.deleted_at = datetime.utcnow()
+    novel.deleted_at = datetime.now(timezone.utc)
     novel.status = "draft"  # 下架
     db.commit()
     db.refresh(novel)
@@ -410,7 +410,7 @@ async def get_platform_overview(
     db: Session = Depends(get_db),
 ):
     """获取平台总览统计"""
-    today = datetime.utcnow().date()
+    today = datetime.now(timezone.utc).date()
     today_start = datetime.combine(today, datetime.min.time())
 
     # 总用户数（不含已删除）
@@ -470,7 +470,7 @@ async def get_user_stats(
     db: Session = Depends(get_db),
 ):
     """获取用户活跃度统计"""
-    today = datetime.utcnow().date()
+    today = datetime.now(timezone.utc).date()
     start_date = today - timedelta(days=days - 1)
 
     # 每日注册用户数
@@ -523,7 +523,7 @@ async def get_content_stats(
     db: Session = Depends(get_db),
 ):
     """获取内容创作统计"""
-    today = datetime.utcnow().date()
+    today = datetime.now(timezone.utc).date()
     start_date = today - timedelta(days=days - 1)
 
     # 每日新增小说数
@@ -792,7 +792,7 @@ async def batch_delete_users(
             continue
         user = db.query(User).filter(User.id == user_id, User.deleted_at.is_(None)).first()
         if user and not user.is_admin:
-            user.deleted_at = datetime.utcnow()
+            user.deleted_at = datetime.now(timezone.utc)
             user.is_active = False
             success_count += 1
         else:
@@ -848,7 +848,7 @@ async def batch_delete_novels(
     for novel_id in data.novel_ids:
         novel = db.query(Novel).filter(Novel.id == novel_id, Novel.deleted_at.is_(None)).first()
         if novel:
-            novel.deleted_at = datetime.utcnow()
+            novel.deleted_at = datetime.now(timezone.utc)
             novel.status = "draft"
             success_count += 1
         else:

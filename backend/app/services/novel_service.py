@@ -5,7 +5,7 @@
 """
 from typing import Optional, List
 from sqlalchemy.orm import Session, joinedload, selectinload
-from datetime import datetime
+from datetime import datetime, timezone
 
 from ..models.novel import Novel
 from ..models.chapter import Chapter
@@ -105,11 +105,11 @@ class NovelService:
             return None
 
         # 更新字段
-        update_data = novel_data.dict(exclude_unset=True)
+        update_data = novel_data.model_dump(exclude_unset=True)
         for field, value in update_data.items():
             setattr(novel, field, value)
 
-        novel.updated_at = datetime.utcnow()
+        novel.updated_at = datetime.now(timezone.utc)
 
         self.db.commit()
         self.db.refresh(novel)
@@ -141,7 +141,7 @@ class NovelService:
 
         if soft_delete:
             # 软删除
-            novel.deleted_at = datetime.utcnow()
+            novel.deleted_at = datetime.now(timezone.utc)
             self.db.commit()
         else:
             # 硬删除

@@ -1,6 +1,6 @@
 """管理员功能测试"""
 import pytest
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 class TestAdminPermission:
@@ -110,7 +110,7 @@ class TestUserManagement:
     def test_restore_user(self, client, admin_headers, test_user, db):
         """恢复已删除用户"""
         # 先删除
-        test_user.deleted_at = datetime.utcnow()
+        test_user.deleted_at = datetime.now(timezone.utc)
         test_user.is_active = False
         db.commit()
 
@@ -155,7 +155,7 @@ class TestNovelManagement:
 
     def test_restore_novel(self, client, admin_headers, test_novel, db):
         """恢复已删除小说"""
-        test_novel.deleted_at = datetime.utcnow()
+        test_novel.deleted_at = datetime.now(timezone.utc)
         db.commit()
 
         response = client.post(

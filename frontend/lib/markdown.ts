@@ -83,8 +83,8 @@ export function markdownToHtml(markdown: string): string {
     });
   } catch (error) {
     console.error('DOMPurify 加载或清理失败 (可能是 SSR 环境下的 jsdom 问题):', error);
-    // 降级策略：如果是服务端渲染出错，返回 rawHtml 可能是可接受的临时方案
-    return rawHtml; 
+    // 降级策略：避免输出未清理 HTML，改为纯文本
+    return htmlToText(rawHtml);
   }
 }
 

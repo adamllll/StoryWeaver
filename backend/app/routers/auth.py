@@ -1,10 +1,11 @@
 """认证路由 - 用户注册和登录"""
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Response
 from sqlalchemy.orm import Session
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from collections import defaultdict
 
 from ..database import get_db
+from ..config import settings
 from ..models import User
 from ..schemas import UserCreate, UserLogin, UserResponse, UserWithToken, PasswordReset
 from ..utils.auth import create_token, get_current_user
@@ -67,7 +68,7 @@ async def register(
         username=user_data.username,
         email=user_data.email,
         password_hash=hashed_password,
-        last_login_at=datetime.utcnow(),  # 注册即登录，设置最后登录时间
+        last_login_at=datetime.now(timezone.utc),  # 注册即登录，设置最后登录时间
     )
     db.add(user)
     db.commit()
@@ -75,13 +76,14 @@ async def register(
 
     # 生成令牌（默认记住登录，30天）
     token = create_token(user.id, remember_me=True)
+    cookie_secure = not settings.DEBUG
 
     # 设置 httpOnly Cookie（本小姐的安全防护！防止 XSS 攻击！）(￣▽￣)ノ
     response.set_cookie(
         key="access_token",
         value=token,
         httponly=True,  # 防止 JavaScript 访问
-        secure=False,  # 开发环境使用 HTTP，生产环境应设为 True
+        secure=cookie_secure,  # 生产环境强制 HTTPS
         samesite="lax",  # CSRF 防护
         max_age=30 * 24 * 60 * 60,  # 30天（秒）
     )
@@ -150,11 +152,12 @@ async def login(
         )
 
     # 更新最后登录时间
-    user.last_login_at = datetime.utcnow()
+    user.last_login_at = datetime.now(timezone.utc)
     db.commit()
 
     # 生成令牌（根据记住我选项设置有效期）
     token = create_token(user.id, credentials.remember_me)
+    cookie_secure = not settings.DEBUG
 
     # 设置 httpOnly Cookie（本小姐的安全防护！防止 XSS 攻击！）(￣▽￣)ノ
     max_age = 30 * 24 * 60 * 60 if credentials.remember_me else 24 * 60 * 60  # 30天或1天
@@ -162,7 +165,7 @@ async def login(
         key="access_token",
         value=token,
         httponly=True,  # 防止 JavaScript 访问
-        secure=False,  # 开发环境使用 HTTP，生产环境应设为 True
+        secure=cookie_secure,  # 生产环境强制 HTTPS
         samesite="lax",  # CSRF 防护
         max_age=max_age,
     )
@@ -215,10 +218,11 @@ async def logout(response: Response):
         清除 httpOnly Cookie，实现安全登出（本小姐的安全设计！）(￣▽￣)ノ
     """
     # 清除 httpOnly Cookie
+    cookie_secure = not settings.DEBUG
     response.delete_cookie(
         key="access_token",
         httponly=True,
-        secure=False,  # 开发环境使用 HTTP，生产环境应设为 True
+        secure=cookie_secure,  # 生产环境强制 HTTPS
         samesite="lax",
     )
 
@@ -244,7 +248,7 @@ async def reset_password(request: Request, reset_data: PasswordReset, db: Sessio
     """
     # 速率限制检查（本小姐的安全防护！）
     key = f"{reset_data.username}:{reset_data.email}"
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
 
     # 清理过期记录
     _reset_attempts[key] = [

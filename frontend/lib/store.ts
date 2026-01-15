@@ -68,6 +68,11 @@ export const useAuthStore = create<AuthState>()(
       logout: () => {
         // Token 由 httpOnly Cookie 管理，需要调用后端 logout 接口清除 Cookie
         // 前端只需清除状态
+        try {
+          void Promise.resolve(authApi.logout()).catch(() => undefined);
+        } catch {
+          // 忽略同步异常，前端状态仍需清理
+        }
         set({ user: null, isAuthenticated: false, isInitialized: true });
       },
 

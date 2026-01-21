@@ -137,15 +137,15 @@ export default function AdventurePlayPage() {
       const result = await makeChoice(choice);
       if (result) {
         setConversationMessages((prev) => {
-          const baseMessages = prev.length > 0
+          const baseMessages: ConversationMessage[] = prev.length > 0
             ? [...prev]
             : storeCurrentNode
-              ? [{ role: "assistant", content: storeCurrentNode.content }]
+              ? [{ role: "assistant" as const, content: storeCurrentNode.content }]
               : [];
-          const nextMessages = [
+          const nextMessages: ConversationMessage[] = [
             ...baseMessages,
-            { role: "user", content: choice.text },
-            { role: "assistant", content: result.new_node.content },
+            { role: "user" as const, content: choice.text },
+            { role: "assistant" as const, content: result.new_node.content },
           ];
           persistConversation(nextMessages);
           return nextMessages;
@@ -206,9 +206,9 @@ export default function AdventurePlayPage() {
       setNodes(updatedNodes);
 
       setConversationMessages((prev) => {
-        const nextMessages = prev.length > 0
+        const nextMessages: ConversationMessage[] = prev.length > 0
           ? [...prev]
-          : [{ role: "assistant", content: result.node.content }];
+          : [{ role: "assistant" as const, content: result.node.content }];
         let lastAssistantIndex = -1;
         for (let i = nextMessages.length - 1; i >= 0; i -= 1) {
           if (nextMessages[i].role === "assistant") {
@@ -222,7 +222,7 @@ export default function AdventurePlayPage() {
             content: result.node.content,
           };
         } else {
-          nextMessages.push({ role: "assistant", content: result.node.content });
+          nextMessages.push({ role: "assistant" as const, content: result.node.content });
         }
         persistConversation(nextMessages);
         return nextMessages;

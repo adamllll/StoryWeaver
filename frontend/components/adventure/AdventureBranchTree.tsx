@@ -65,8 +65,8 @@ export function AdventureBranchTree({ tree, onNodeClick, height = 520 }: Adventu
         color: "#f8fafc",
         fontSize: 12,
       },
-      formatter: (params: { data?: TreeChartNode }) => {
-        const data = params.data;
+      formatter: (params) => {
+        const data = (params as { data?: TreeChartNode }).data;
         if (!data?.meta) return "";
         const meta = data.meta;
         const forkInfo = meta.fork_from_chapter

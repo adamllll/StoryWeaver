@@ -40,6 +40,8 @@
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
     "date-fns": "^4.1.0",
+    "echarts": "^6.0.0",
+    "echarts-for-react": "^3.0.6",
     "framer-motion": "^12.23.26",
     "isomorphic-dompurify": "^2.34.0",
     "lucide-react": "^0.323.0",

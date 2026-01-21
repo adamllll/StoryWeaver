@@ -219,6 +219,12 @@ export interface Chapter {
   }[];
 }
 
+export interface ChoiceResult {
+  next_chapter_id: number;
+  is_ending: boolean;
+  ending_type?: string | null;
+}
+
 export interface AIUsage {
   prompt_tokens: number;
   completion_tokens: number;
@@ -315,6 +321,9 @@ export const chaptersApi = {
 
   reorder: (novelId: number, chapterIds: number[]) =>
     apiClient.put(`/novels/${novelId}/chapters/reorder`, { chapter_ids: chapterIds }),
+
+  selectChoice: (novelId: number, chapterId: number, data: { choice_id: number }) =>
+    apiClient.post<ChoiceResult>(`/novels/${novelId}/chapters/${chapterId}/select-choice`, data),
 };
 
 // ============================================
@@ -466,6 +475,25 @@ export const aiApi = {
 // 冒险模式 API
 // ============================================
 
+export interface AdventureTreeNode {
+  id: number;
+  title: string;
+  player_name: string;
+  category: string;
+  total_nodes: number;
+  total_words: number;
+  is_finished: boolean;
+  fork_count: number;
+  fork_from_chapter?: number | null;
+  children: AdventureTreeNode[];
+}
+
+export interface AdventureTreeResponse {
+  root_adventure_id: number;
+  total_forks: number;
+  tree: AdventureTreeNode;
+}
+
 export const adventureApi = {
   create: (data: CreateAdventureRequest) =>
     apiClient.post<Adventure>("/adventures/", data),
@@ -481,11 +509,11 @@ export const adventureApi = {
 
   getNodes: (id: number) => apiClient.get<StoryNode[]>(`/adventures/${id}/nodes`),
 
-  export: (id: number, format: 'txt' | 'pdf') =>
+  export: (id: number, format: 'txt' | 'md') =>
     request<Blob>(`/adventures/${id}/export?format=${format}`, {
       method: "GET",
       headers: {
-        Accept: format === 'pdf' ? 'application/pdf' : 'text/plain'
+        Accept: format === 'md' ? 'text/markdown' : 'text/plain'
       }
     }),
 
@@ -523,6 +551,10 @@ export const adventureApi = {
       ending_type: string;
       novel: unknown;
     }>(`/adventures/${id}/finish`, data),
+
+  // 分支树
+  getTree: (id: number) =>
+    apiClient.get<AdventureTreeResponse>(`/adventures/${id}/tree`),
 };
 
 // ============================================
@@ -531,31 +563,36 @@ export const adventureApi = {
 
 export interface ReadingProgressResponse {
   novel_id: number;
-  chapter_id: number;
+  chapter_id?: number;
+  current_chapter_id?: number;
   chapter_title: string;
-  choices_made: {
-    chapter_id: number;
-    choice_index: number;
-    choice_text: string;
-    timestamp: string;
-  }[];
+  choices_made: ChoiceHistoryItem[];
   endings_unlocked: string[];
   progress_percentage: number;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface ChoiceHistoryItem {
   chapter_id: number;
-  chapter_title: string;
-  choice_index: number;
+  choice_id: number;
   choice_text: string;
   timestamp: string;
 }
 
 export interface EndingInfo {
+  ending_id: string;
   chapter_id: number;
-  chapter_title: string;
-  ending_description: string;
-  unlocked_at: string;
+  title: string;
+  ending_type: string;
+  is_unlocked: boolean;
+  is_hidden: boolean;
+}
+
+export interface EndingsList {
+  total_endings: number;
+  unlocked_count: number;
+  endings: EndingInfo[];
 }
 
 export const readingProgressApi = {
@@ -566,8 +603,6 @@ export const readingProgressApi = {
   // 保存阅读进度
   save: (novelId: number, data: {
     chapter_id: number;
-    choice_index?: number;
-    choice_text?: string;
   }) => apiClient.post<ReadingProgressResponse>(`/novels/${novelId}/reading-progress`, data),
 
   // 清除阅读进度
@@ -576,11 +611,11 @@ export const readingProgressApi = {
 
   // 获取选择历史
   getChoiceHistory: (novelId: number) =>
-    apiClient.get<{ choices: ChoiceHistoryItem[] }>(`/novels/${novelId}/choice-history`),
+    apiClient.get<ChoiceHistoryItem[]>(`/novels/${novelId}/choice-history`),
 
   // 获取所有结局
   getEndings: (novelId: number) =>
-    apiClient.get<{ endings: EndingInfo[] }>(`/novels/${novelId}/endings`),
+    apiClient.get<EndingsList>(`/novels/${novelId}/endings`),
 };
 
 // ============================================

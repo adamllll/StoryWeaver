@@ -121,18 +121,22 @@ export default function ReadPage() {
   const handleChoice = async (choice: Choice, choiceIndex: number) => {
     setShowChoices(false);
 
-    // 保存选择历史（记录笨蛋的每个决定～）
     try {
-      await readingProgressApi.save(novelId, {
-        chapter_id: choice.chapter_id,
-        choice_index: choiceIndex,
-        choice_text: choice.choice_text,
+      const result = await chaptersApi.selectChoice(novelId, chapterId, {
+        choice_id: choiceIndex,
       });
+      const nextChapterId = result.next_chapter_id ?? choice.chapter_id;
+      router.push(`/read/${novelId}/${nextChapterId}`);
+      return;
     } catch (error) {
-      console.warn("Failed to save choice:", error);
+      const message = error instanceof ApiError ? error.detail : "选择失败，请稍后重试";
+      toast({
+        title: "选择失败",
+        description: message,
+        variant: "destructive",
+      });
+      setShowChoices(true);
     }
-
-    router.push(`/read/${novelId}/${choice.chapter_id}`);
   };
 
   if (isLoading) {

@@ -133,6 +133,7 @@ describe('useAdventureStore', () => {
       isLoading: false,
       isRolling: false,
       rollResult: null,
+      showEndDialog: false,
     });
     // 清除所有 mock 调用记录
     jest.clearAllMocks();
@@ -179,8 +180,9 @@ describe('useAdventureStore', () => {
     it('should do nothing if no currentAdventure', async () => {
       const choice: Choice = mockNode.choices[0];
 
-      await useAdventureStore.getState().makeChoice(choice);
+      const result = await useAdventureStore.getState().makeChoice(choice);
 
+      expect(result).toBeNull();
       expect(apiClient.post).not.toHaveBeenCalled();
     });
 
@@ -218,9 +220,10 @@ describe('useAdventureStore', () => {
       (apiClient.post as jest.Mock).mockResolvedValue(mockChoiceResponse);
 
       const choice: Choice = mockNode.choices[0];
-      await useAdventureStore.getState().makeChoice(choice);
+      const result = await useAdventureStore.getState().makeChoice(choice);
 
       const state = useAdventureStore.getState();
+      expect(result).toEqual(mockChoiceResponse);
       expect(state.rollResult).toEqual(mockChoiceResponse);
       // isRolling 在动画期间保持为 true，3.5s 后才变为 false
       expect(state.isRolling).toBe(true);

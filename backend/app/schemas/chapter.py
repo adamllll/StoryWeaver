@@ -76,6 +76,13 @@ class ChapterNavigation(BaseModel):
     next_chapter_title: Optional[str] = None
 
 
+class ChapterChoice(BaseModel):
+    """章节分支选项"""
+
+    chapter_id: int
+    choice_text: str
+
+
 class ChapterListItem(BaseModel):
     """章节列表项模式"""
 
@@ -99,6 +106,7 @@ class ChapterDetail(ChapterListItem):
     novel_id: int
     content: Optional[str] = None
     navigation: ChapterNavigation
+    choices: List[ChapterChoice] = Field(default_factory=list)
 
 
 class ChapterListResponse(BaseModel):

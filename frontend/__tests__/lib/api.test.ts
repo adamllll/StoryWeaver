@@ -877,11 +877,13 @@ describe('readingProgressApi', () => {
   it('should get reading progress', async () => {
     const mockResponse = {
       novel_id: 1,
-      chapter_id: 5,
+      current_chapter_id: 5,
       chapter_title: '第五章',
       choices_made: [],
       endings_unlocked: [],
       progress_percentage: 50,
+      created_at: '2025-01-01T00:00:00Z',
+      updated_at: '2025-01-01T00:00:00Z',
     };
 
     (global.fetch as jest.Mock).mockResolvedValueOnce({
@@ -895,14 +897,16 @@ describe('readingProgressApi', () => {
   });
 
   it('should save reading progress', async () => {
-    const progressData = { chapter_id: 6, choice_index: 1, choice_text: '选择A' };
+    const progressData = { chapter_id: 6 };
     const mockResponse = {
       novel_id: 1,
-      chapter_id: 6,
+      current_chapter_id: 6,
       chapter_title: '第六章',
-      choices_made: [{ ...progressData, timestamp: new Date().toISOString() }],
+      choices_made: [],
       endings_unlocked: [],
       progress_percentage: 60,
+      created_at: '2025-01-01T00:00:00Z',
+      updated_at: '2025-01-01T00:00:00Z',
     };
 
     (global.fetch as jest.Mock).mockResolvedValueOnce({
@@ -926,11 +930,9 @@ describe('readingProgressApi', () => {
   });
 
   it('should get choice history', async () => {
-    const mockResponse = {
-      choices: [
-        { chapter_id: 1, chapter_title: 'Ch1', choice_index: 0, choice_text: 'A', timestamp: '2025-01-01' },
-      ],
-    };
+    const mockResponse = [
+      { chapter_id: 1, choice_id: 0, choice_text: 'A', timestamp: '2025-01-01' },
+    ];
 
     (global.fetch as jest.Mock).mockResolvedValueOnce({
       ok: true,
@@ -944,8 +946,17 @@ describe('readingProgressApi', () => {
 
   it('should get endings', async () => {
     const mockResponse = {
+      total_endings: 1,
+      unlocked_count: 0,
       endings: [
-        { chapter_id: 10, chapter_title: '结局A', ending_description: '好结局', unlocked_at: '2025-01-01' },
+        {
+          ending_id: 'ending_10',
+          chapter_id: 10,
+          title: '结局A',
+          ending_type: 'happy',
+          is_unlocked: false,
+          is_hidden: false,
+        },
       ],
     };
 
@@ -1011,15 +1022,10 @@ describe('adventureApi', () => {
   });
 
   it('should list adventures', async () => {
-    const mockResponse = {
-      adventures: [
-        { id: 1, title: 'Adventure 1' },
-        { id: 2, title: 'Adventure 2' },
-      ],
-      total: 2,
-      page: 1,
-      page_size: 10,
-    };
+    const mockResponse = [
+      { id: 1, title: 'Adventure 1' },
+      { id: 2, title: 'Adventure 2' },
+    ];
 
     (global.fetch as jest.Mock).mockResolvedValueOnce({
       ok: true,
@@ -1063,5 +1069,33 @@ describe('adventureApi', () => {
 
     const result = await adventureApi.getNodes(1);
     expect(result).toEqual(mockNodes);
+  });
+
+  it('should get adventure tree', async () => {
+    const mockResponse = {
+      root_adventure_id: 1,
+      total_forks: 2,
+      tree: {
+        id: 1,
+        title: 'Adventure Root',
+        player_name: 'PlayerA',
+        category: '玄幻',
+        total_nodes: 10,
+        total_words: 5000,
+        is_finished: false,
+        fork_count: 2,
+        fork_from_chapter: null,
+        children: [],
+      },
+    };
+
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => mockResponse,
+    });
+
+    const result = await adventureApi.getTree(1);
+    expect(result).toEqual(mockResponse);
   });
 });

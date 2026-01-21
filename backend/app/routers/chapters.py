@@ -480,6 +480,14 @@ def _chapter_to_detail(chapter: Chapter, novel: Novel, db: Session) -> ChapterDe
         if current_idx < len(sorted_chapters) - 1
         else None
     )
+    child_chapters = sorted(chapter.children, key=lambda ch: ch.order_num)
+    choices = [
+        {
+            "chapter_id": child.id,
+            "choice_text": child.choice_text or f"选项 {index + 1}",
+        }
+        for index, child in enumerate(child_chapters)
+    ]
 
     return ChapterDetail(
         id=chapter.id,
@@ -496,4 +504,5 @@ def _chapter_to_detail(chapter: Chapter, novel: Novel, db: Session) -> ChapterDe
             next_chapter_id=next_chapter.id if next_chapter else None,
             next_chapter_title=next_chapter.title if next_chapter else None,
         ),
+        choices=choices,
     )

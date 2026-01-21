@@ -12,6 +12,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Loader2,
+  GitFork,
 } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { Adventure, StoryNode } from "@/lib/adventure-types";
@@ -147,6 +148,15 @@ export default function AdventureNovelReaderPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => router.push(`/adventures/${adventureId}/tree`)}
+            className={cn(
+              "p-2 rounded-full transition-colors",
+              settings.isDark ? "hover:bg-white/10 text-gray-400" : "hover:bg-black/5 text-gray-600"
+            )}
+          >
+            <GitFork className="w-5 h-5" />
+          </button>
           <button
             onClick={() => setShowToc(!showToc)}
             className={cn(

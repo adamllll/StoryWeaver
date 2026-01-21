@@ -23,7 +23,7 @@ interface AdventureState {
   // Actions
   setAdventure: (adventure: Adventure) => void;
   setCurrentNode: (node: StoryNode) => void;
-  makeChoice: (choice: Choice) => Promise<void>;
+  makeChoice: (choice: Choice) => Promise<ChoiceResponse | null>;
   loadAdventure: (id: number) => Promise<void>;
   reset: () => void;
   finishAdventure: (adventureId: number, endingType: 'happy' | 'tragic' | 'user_quit') => Promise<void>;
@@ -51,10 +51,10 @@ export const useAdventureStore = create<AdventureState>()(
 
         makeChoice: async (choice) => {
           const { currentAdventure, isRolling } = get();
-          if (!currentAdventure) return;
+          if (!currentAdventure) return null;
 
           // 防止重复提交：如果正在投骰子，直接返回
-          if (isRolling) return;
+          if (isRolling) return null;
 
           set({ isRolling: true });
 
@@ -94,6 +94,7 @@ export const useAdventureStore = create<AdventureState>()(
                 }, 500); // 等待状态更新后再触发结束流程
               }
             }, 3500); // 3.5s for animation
+            return result;
           } catch (error) {
             set({ isRolling: false });
             throw error;
@@ -158,6 +159,8 @@ export const useAdventureStore = create<AdventureState>()(
         reset: () => set({
           currentAdventure: null,
           currentNode: null,
+          isLoading: false,
+          isRolling: false,
           rollResult: null,
           showEndDialog: false,  // 重置时清空对话框状态
         }),

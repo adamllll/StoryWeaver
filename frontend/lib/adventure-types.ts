@@ -7,6 +7,8 @@ export interface Adventure {
   protagonist_name: string;
   protagonist_gender: "male" | "female" | "other";
   protagonist_personality: string | null;
+  parent_adventure_id?: number | null;
+  fork_from_node_id?: number | null;
   current_node_id: number | null;
   player_state: PlayerState;
   is_finished: boolean;

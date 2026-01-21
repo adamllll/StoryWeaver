@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAdventureStore } from "@/lib/adventure-store";
-import { apiClient, ApiError } from "@/lib/api";
+import { apiClient, ApiError, conversationsApi, ConversationMessage } from "@/lib/api";
 import { StoryNode, Choice } from "@/lib/adventure-types";
 import { PlayerStatePanel } from "@/components/adventure/PlayerStatePanel";
 import { StoryDisplay } from "@/components/adventure/StoryDisplay";
@@ -14,7 +14,8 @@ import { DiceRollAnimation } from "@/components/adventure/DiceRollAnimation";
 import { ChapterSidebar } from "@/components/adventure/ChapterSidebar";
 import { GameEndDialog } from "@/components/adventure/GameEndDialog";
 import { Button } from "@/components/ui/button";
-import { X, BookText, Sparkles, User, List, ArrowLeft, RefreshCw } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { X, BookText, Sparkles, User, List, ArrowLeft, RefreshCw, MessageSquare, GitFork } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 
 // ------------------------------------------------------------------
@@ -44,6 +45,10 @@ export default function AdventurePlayPage() {
   const [nodes, setNodes] = useState<StoryNode[]>([]);
   const [viewingNode, setViewingNode] = useState<StoryNode | null>(null);
   const [isChoiceModalOpen, setIsChoiceModalOpen] = useState(false);
+  const [conversationOpen, setConversationOpen] = useState(false);
+  const [conversationMessages, setConversationMessages] = useState<ConversationMessage[]>([]);
+  const [isConversationLoading, setIsConversationLoading] = useState(true);
+  const conversationSeededRef = useRef(false);
 
   // 重试相关状态
   const [canRetry, setCanRetry] = useState(false);
@@ -84,6 +89,44 @@ export default function AdventurePlayPage() {
     }
   }, [storeCurrentNode, adventureId]);
 
+  useEffect(() => {
+    if (!adventureId) return;
+    conversationSeededRef.current = false;
+    setIsConversationLoading(true);
+    conversationsApi.get(adventureId)
+      .then((data) => {
+        setConversationMessages(data.messages ?? []);
+      })
+      .catch((error) => {
+        if (error instanceof ApiError && error.status === 404) {
+          setConversationMessages([]);
+          return;
+        }
+        console.warn("Failed to load conversation:", error);
+      })
+      .finally(() => setIsConversationLoading(false));
+  }, [adventureId]);
+
+  const persistConversation = useCallback(async (messages: ConversationMessage[]) => {
+    if (!adventureId) return;
+    try {
+      await conversationsApi.save(adventureId, { messages });
+    } catch (error) {
+      console.warn("Failed to save conversation:", error);
+    }
+  }, [adventureId]);
+
+  useEffect(() => {
+    if (!storeCurrentNode || isConversationLoading) return;
+    if (conversationMessages.length > 0 || conversationSeededRef.current) return;
+    const seedMessages: ConversationMessage[] = [
+      { role: "assistant", content: storeCurrentNode.content },
+    ];
+    conversationSeededRef.current = true;
+    setConversationMessages(seedMessages);
+    persistConversation(seedMessages);
+  }, [storeCurrentNode, conversationMessages.length, isConversationLoading, persistConversation]);
+
   // Handlers
   const handleChoice = useCallback(async (choice: Choice) => {
     setIsChoiceModalOpen(false);
@@ -91,7 +134,23 @@ export default function AdventurePlayPage() {
     setCanRetry(false);  // 清除之前的重试状态
 
     try {
-      await makeChoice(choice);
+      const result = await makeChoice(choice);
+      if (result) {
+        setConversationMessages((prev) => {
+          const baseMessages = prev.length > 0
+            ? [...prev]
+            : storeCurrentNode
+              ? [{ role: "assistant", content: storeCurrentNode.content }]
+              : [];
+          const nextMessages = [
+            ...baseMessages,
+            { role: "user", content: choice.text },
+            { role: "assistant", content: result.new_node.content },
+          ];
+          persistConversation(nextMessages);
+          return nextMessages;
+        });
+      }
     } catch (err: unknown) {
       let message = "请稍后重试";
       let isRetryable = false;
@@ -118,7 +177,7 @@ export default function AdventurePlayPage() {
         variant: "destructive"
       });
     }
-  }, [makeChoice, toast]);
+  }, [makeChoice, persistConversation, storeCurrentNode, toast]);
 
   // 重试功能
   const handleRetry = useCallback(async () => {
@@ -146,6 +205,29 @@ export default function AdventurePlayPage() {
       const updatedNodes = await apiClient.get<StoryNode[]>(`/adventures/${currentAdventure.id}/nodes`);
       setNodes(updatedNodes);
 
+      setConversationMessages((prev) => {
+        const nextMessages = prev.length > 0
+          ? [...prev]
+          : [{ role: "assistant", content: result.node.content }];
+        let lastAssistantIndex = -1;
+        for (let i = nextMessages.length - 1; i >= 0; i -= 1) {
+          if (nextMessages[i].role === "assistant") {
+            lastAssistantIndex = i;
+            break;
+          }
+        }
+        if (lastAssistantIndex >= 0) {
+          nextMessages[lastAssistantIndex] = {
+            ...nextMessages[lastAssistantIndex],
+            content: result.node.content,
+          };
+        } else {
+          nextMessages.push({ role: "assistant", content: result.node.content });
+        }
+        persistConversation(nextMessages);
+        return nextMessages;
+      });
+
       toast({
         title: "章节已重新生成",
         description: "AI 为你创作了新的故事内容 ✨",
@@ -167,7 +249,7 @@ export default function AdventurePlayPage() {
     } finally {
       setIsRegenerating(false);
     }
-  }, [currentAdventure, isRegenerating, toast]);
+  }, [currentAdventure, isRegenerating, persistConversation, toast]);
 
   const handleAnimationComplete = () => {
     apiClient.get<StoryNode[]>(`/adventures/${adventureId}/nodes`).then(setNodes);
@@ -246,6 +328,12 @@ export default function AdventurePlayPage() {
             </Link>
 
             <div className="flex items-center gap-2">
+              <Link href={`/adventures/${adventureId}/tree`}>
+                <Button variant="ghost" size="sm" className="text-gray-500 hover:text-purple-600 hover:bg-purple-50">
+                  <GitFork className="w-4 h-4 mr-1" />
+                  分支树
+                </Button>
+              </Link>
               {/* Regenerate Chapter Button (Only for chapter > 1 and not finished) */}
               {!currentAdventure?.is_finished && isLatest && viewingNode.chapter_num > 1 && (
                 <Button
@@ -415,6 +503,16 @@ export default function AdventurePlayPage() {
         >
           <User className="w-5 h-5" />
         </motion.button>
+
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => setConversationOpen(true)}
+          className="w-12 h-12 rounded-full glass flex items-center justify-center text-gray-600 shadow-ios-float hover:text-purple-600 transition-colors"
+          title="对话记录"
+        >
+          <MessageSquare className="w-5 h-5" />
+        </motion.button>
       </div>
 
       {/* ------------------------------------------------------------------
@@ -478,6 +576,67 @@ export default function AdventurePlayPage() {
                   protagonist={currentAdventure.protagonist_name}
                 />
               </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Conversation Drawer (Right) */}
+      <AnimatePresence>
+        {conversationOpen && (
+          <>
+            <motion.div 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setConversationOpen(false)}
+              className="fixed inset-0 z-50 bg-black/20 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="fixed inset-y-0 right-0 z-50 w-96 bg-white/95 backdrop-blur-xl shadow-2xl border-l border-white/50 p-4"
+            >
+              <div className="flex justify-between items-center mb-4">
+                <span className="font-bold text-lg">对话记录</span>
+                <Button variant="ghost" size="icon" onClick={() => setConversationOpen(false)}>
+                  <X className="w-5 h-5" />
+                </Button>
+              </div>
+              <ScrollArea className="h-[calc(100%-60px)] pr-3">
+                {isConversationLoading ? (
+                  <div className="flex items-center justify-center py-12 text-sm text-gray-400">
+                    正在载入对话...
+                  </div>
+                ) : conversationMessages.length === 0 ? (
+                  <div className="flex items-center justify-center py-12 text-sm text-gray-400">
+                    暂无对话记录
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {conversationMessages.map((message, index) => {
+                      const isUser = message.role === "user";
+                      const isSystem = message.role === "system";
+                      return (
+                        <div
+                          key={`${message.role}-${index}`}
+                          className={`flex ${isUser ? "justify-end" : "justify-start"}`}
+                        >
+                          <div
+                            className={`max-w-[85%] rounded-2xl px-4 py-2 text-sm leading-relaxed whitespace-pre-wrap shadow-sm ${
+                              isSystem
+                                ? "bg-gray-100 text-gray-600 border border-gray-200"
+                                : isUser
+                                ? "bg-purple-600 text-white"
+                                : "bg-white text-gray-700 border border-gray-100"
+                            }`}
+                          >
+                            {message.content}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </ScrollArea>
             </motion.div>
           </>
         )}

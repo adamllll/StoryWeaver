@@ -357,21 +357,28 @@ export default function AdventuresPage() {
               {new Date(adv.updated_at).toLocaleDateString()}
             </span>
 
-            {adv.is_finished ? (
-              <Link href={`/adventures/${adv.id}/novel`}>
-                <Button variant="outline" size="sm" className="group/btn">
-                  <ScrollText className="w-3.5 h-3.5 mr-2 text-gray-500 group-hover/btn:text-gray-900" />
-                  阅读小说
+            <div className="flex items-center gap-2">
+              <Link href={`/adventures/${adv.id}/tree`}>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-purple-600 hover:bg-purple-50">
+                  <GitFork className="w-4 h-4" />
                 </Button>
               </Link>
-            ) : (
-              <Link href={`/adventures/${adv.id}/play`}>
-                <Button size="sm" className="bg-gray-900 hover:bg-black text-white group/btn">
-                  继续冒险
-                  <ChevronRight className="w-3.5 h-3.5 ml-1 group-hover/btn:translate-x-0.5 transition-transform" />
-                </Button>
-              </Link>
-            )}
+              {adv.is_finished ? (
+                <Link href={`/adventures/${adv.id}/novel`}>
+                  <Button variant="outline" size="sm" className="group/btn">
+                    <ScrollText className="w-3.5 h-3.5 mr-2 text-gray-500 group-hover/btn:text-gray-900" />
+                    阅读小说
+                  </Button>
+                </Link>
+              ) : (
+                <Link href={`/adventures/${adv.id}/play`}>
+                  <Button size="sm" className="bg-gray-900 hover:bg-black text-white group/btn">
+                    继续冒险
+                    <ChevronRight className="w-3.5 h-3.5 ml-1 group-hover/btn:translate-x-0.5 transition-transform" />
+                  </Button>
+                </Link>
+              )}
+            </div>
           </div>
         </div>
       </Card>

@@ -1,10 +1,10 @@
 /**
- * 织梦者创作中心 - Zen-iOS 重构版
+ * 织梦者创作中心 - Sketch 风格适配版
  *
  * 核心特性：
  * - 沉浸式三栏 Grid 布局
  * - Framer Motion 侧边栏平滑折叠
- * - 全局物理噪点背景透传
+ * - Sketch 风格背景和 UI 元素
  * - 高度模块化的状态管理
  */
 
@@ -34,18 +34,19 @@ import { useAuthStore } from "@/lib/store";
 import { useToast } from "@/components/ui/use-toast";
 import { useChapters } from "@/hooks/useChapters";
 import { useAutoSave } from "@/hooks/useAutoSave";
+import { Button } from "@/components/ui/button";
 
 // 组件导入
 import { EnhancedChapterList } from "@/components/editor/EnhancedChapterList";
 
-// 大型组件懒加载（优化首屏加载性能）
+// 大型组件懒加载
 const MindMapTree = dynamic(
   () => import("@/components/editor/MindMapTree").then((mod) => mod.MindMapTree),
   {
     ssr: false,
     loading: () => (
       <div className="flex items-center justify-center h-full">
-        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+        <Loader2 className="w-8 h-8 animate-spin text-sketch-text-secondary" />
       </div>
     ),
   }
@@ -57,7 +58,7 @@ const ProgressDashboard = dynamic(
     ssr: false,
     loading: () => (
       <div className="flex items-center justify-center h-full">
-        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+        <Loader2 className="w-8 h-8 animate-spin text-sketch-text-secondary" />
       </div>
     ),
   }
@@ -69,7 +70,7 @@ const AIAssistant = dynamic(
     ssr: false,
     loading: () => (
       <div className="flex items-center justify-center h-full">
-        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+        <Loader2 className="w-8 h-8 animate-spin text-sketch-text-secondary" />
       </div>
     ),
   }
@@ -81,24 +82,23 @@ const WorldSettingsPanel = dynamic(
     ssr: false,
     loading: () => (
       <div className="flex items-center justify-center h-full">
-        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+        <Loader2 className="w-8 h-8 animate-spin text-sketch-text-secondary" />
       </div>
     ),
   }
 );
 
-// Tiptap 编辑器懒加载 (带更好的 Loading 骨架屏)
 const TiptapEditor = dynamic(
   () => import("@/components/editor/TiptapEditor").then((mod) => mod.TiptapEditor),
   {
     ssr: false,
     loading: () => (
       <div className="flex flex-col space-y-4 p-8 animate-pulse">
-        <div className="h-8 bg-gray-200 rounded w-1/3 mb-8"></div>
+        <div className="h-8 bg-gray-200/60 rounded w-1/3 mb-8 border-2 border-dashed border-gray-300/50"></div>
         <div className="space-y-3">
-          <div className="h-4 bg-gray-200 rounded w-full"></div>
-          <div className="h-4 bg-gray-200 rounded w-5/6"></div>
-          <div className="h-4 bg-gray-200 rounded w-4/6"></div>
+          <div className="h-4 bg-gray-200/60 rounded w-full border border-dashed border-gray-300/30"></div>
+          <div className="h-4 bg-gray-200/60 rounded w-5/6 border border-dashed border-gray-300/30"></div>
+          <div className="h-4 bg-gray-200/60 rounded w-4/6 border border-dashed border-gray-300/30"></div>
         </div>
       </div>
     ),
@@ -116,17 +116,16 @@ export default function NovelWorkspacePage() {
   const [novel, setNovel] = useState<NovelDetail | null>(null);
   const [currentChapter, setCurrentChapter] = useState<Chapter | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   // === 编辑器状态 ===
   const [editorContent, setEditorContent] = useState("");
   const [chapterTitle, setChapterTitle] = useState("");
-  
+
   // === UI 布局状态 ===
   const [activeTab, setActiveTab] = useState<"editor" | "mindmap" | "stats" | "world">("editor");
   const [leftPanelOpen, setLeftPanelOpen] = useState(true);
   const [rightPanelOpen, setRightPanelOpen] = useState(true);
 
-  // 侧边栏宽度控制 (使用 ref 避免重渲染导致的卡顿)
   const [sidebarWidth, setSidebarWidth] = useState(320);
 
   // === Hooks ===
@@ -163,18 +162,21 @@ export default function NovelWorkspacePage() {
   ] as const;
 
   // === 业务逻辑方法 ===
-  const loadChapter = useCallback(async (chapterId: number) => {
-    try {
-      const chapter = await chaptersApi.get(novelId, chapterId);
-      setCurrentChapter(chapter);
-      setEditorContent(chapter.content);
-      setChapterTitle(chapter.title);
-      setActiveTab("editor");
-    } catch (error: unknown) {
-      const message = error instanceof ApiError ? error.detail : "无法加载章节";
-      toast({ title: "无法加载章节", description: message, variant: "destructive" });
-    }
-  }, [novelId, toast]);
+  const loadChapter = useCallback(
+    async (chapterId: number) => {
+      try {
+        const chapter = await chaptersApi.get(novelId, chapterId);
+        setCurrentChapter(chapter);
+        setEditorContent(chapter.content);
+        setChapterTitle(chapter.title);
+        setActiveTab("editor");
+      } catch (error: unknown) {
+        const message = error instanceof ApiError ? error.detail : "无法加载章节";
+        toast({ title: "无法加载章节", description: message, variant: "destructive" });
+      }
+    },
+    [novelId, toast]
+  );
 
   // === 初始化加载 ===
   useEffect(() => {
@@ -214,9 +216,7 @@ export default function NovelWorkspacePage() {
       chapters
         .filter((chapter) => !chapter.is_branch)
         .forEach((chapter) => {
-          const order = Number.isFinite(chapter.order_num)
-            ? Math.round(chapter.order_num)
-            : 0;
+          const order = Number.isFinite(chapter.order_num) ? Math.round(chapter.order_num) : 0;
           if (order > 0) {
             used.add(order);
           }
@@ -231,7 +231,6 @@ export default function NovelWorkspacePage() {
 
     const nextOrderNum = getNextOrderNum(novel.chapters);
 
-    // 创建新章节
     const newChapter = await createChapter({
       title: `第 ${nextOrderNum} 章`,
       content: "",
@@ -239,9 +238,8 @@ export default function NovelWorkspacePage() {
     });
 
     if (newChapter) {
-      // 直接设置状态，不调用 loadChapter（避免异步覆盖问题）
       setCurrentChapter(newChapter);
-      setEditorContent("");  // 新章节内容为空
+      setEditorContent("");
       setChapterTitle(newChapter.title);
       setActiveTab("editor");
     }
@@ -270,8 +268,8 @@ export default function NovelWorkspacePage() {
     const isAutoTitle = (value: string) => /^第\s*\d+\s*章$/.test(value.trim());
     const shouldUpdateTitle = Boolean(
       title &&
-      title.trim() &&
-      (replace && (isAutoTitle(chapterTitle) || editorContent.trim().length === 0 || !chapterTitle))
+        title.trim() &&
+        (replace && (isAutoTitle(chapterTitle) || editorContent.trim().length === 0 || !chapterTitle))
     );
 
     if (shouldUpdateTitle && title) {
@@ -283,26 +281,25 @@ export default function NovelWorkspacePage() {
   const handleWordCountChange = (count: number) => {
     if (!currentChapter || !novel) return;
 
-    // 乐观更新章节列表中的字数
     setNovel((prev) => {
       if (!prev) return null;
       return {
         ...prev,
-        chapters: prev.chapters.map((c) =>
-          c.id === currentChapter.id ? { ...c, word_count: count } : c
-        ),
+        chapters: prev.chapters.map((c) => (c.id === currentChapter.id ? { ...c, word_count: count } : c)),
       };
     });
-    
-    // 更新当前章节状态
-    setCurrentChapter(prev => prev ? { ...prev, word_count: count } : null);
+
+    setCurrentChapter((prev) => (prev ? { ...prev, word_count: count } : null));
   };
 
   // === 渲染逻辑 ===
   if (isLoading) {
     return (
-      <div className="h-screen w-screen flex items-center justify-center bg-ios-bg">
-        <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
+      <div className="h-screen w-screen flex items-center justify-center grid-paper-bg">
+        <div className="flex items-center gap-3">
+          <Loader2 className="w-6 h-6 animate-spin text-sketch-text-secondary" />
+          <span className="font-patrick text-sketch-text-secondary">加载中...</span>
+        </div>
       </div>
     );
   }
@@ -310,20 +307,20 @@ export default function NovelWorkspacePage() {
   if (!novel) return null;
 
   return (
-    <div className="h-screen flex flex-col bg-ios-bg overflow-hidden relative">
-      {/* 全局背景纹理 (透传 global.css 的 noise) */}
-      <div className="absolute inset-0 pointer-events-none z-0 bg-gradient-to-br from-purple-50/50 via-blue-50/30 to-white/80" />
-
-      {/* 顶部导航栏 */}
-      <header className="h-16 flex-shrink-0 nav-glass-purple z-50 flex items-center justify-between px-4 lg:px-6">
+    <div className="h-screen flex flex-col grid-paper-bg overflow-hidden relative">
+      {/* 顶部导航栏 - Sketch 风格 */}
+      <header className="h-16 flex-shrink-0 z-50 flex items-center justify-between px-4 lg:px-6 border-b-2 border-dashed border-sketch-text-secondary/30 bg-white/80">
         <div className="flex items-center gap-4">
-          <Link href="/workspace" className="p-2 rounded-lg hover:bg-black/5 transition-colors">
-            <ArrowLeft className="w-5 h-5 text-gray-700" />
+          <Link
+            href="/workspace"
+            className="p-2 rounded-lg border-2 border-dashed border-sketch-text-secondary/30 hover:border-sketch-text-primary hover:bg-sticky-blue/20 transition-all"
+          >
+            <ArrowLeft className="w-5 h-5 text-sketch-text-primary" />
           </Link>
           <div>
-            <h1 className="font-bold text-gray-900 leading-tight">{novel.title}</h1>
-            <div className="flex items-center gap-2 text-xs text-gray-500">
-              <span className="bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-medium">
+            <h1 className="font-caveat font-bold text-xl text-sketch-text-primary leading-tight">{novel.title}</h1>
+            <div className="flex items-center gap-2 text-xs font-patrick text-sketch-text-secondary">
+              <span className="bg-sticky-blue px-2 py-0.5 rounded-full border border-sketch-text-secondary/30 font-caveat font-bold text-sketch-text-primary">
                 {novel.category}
               </span>
               <span>{novel.word_count.toLocaleString()} 字</span>
@@ -331,13 +328,17 @@ export default function NovelWorkspacePage() {
           </div>
         </div>
 
-        {/* 视图切换 Tabs */}
-        <div className="flex bg-gray-100/50 p-1 rounded-xl border border-gray-200/50 backdrop-blur-sm">
+        {/* 视图切换 Tabs - Sketch 风格 */}
+        <div className="flex bg-sticky-yellow-light/50 p-1 rounded-full border-2 border-dashed border-sketch-text-secondary/30">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${activeTab === tab.id ? "bg-white text-purple-700 shadow-sm ring-1 ring-black/5" : "text-gray-500 hover:text-gray-700 hover:bg-black/5"}`}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-patrick transition-all ${
+                activeTab === tab.id
+                  ? "bg-sticky-yellow font-caveat font-bold text-sketch-text-primary shadow-sketch"
+                  : "text-sketch-text-secondary hover:text-sketch-text-primary hover:bg-sticky-yellow/30"
+              }`}
             >
               <tab.icon className="w-4 h-4" />
               <span className="hidden sm:inline">{tab.label}</span>
@@ -347,38 +348,42 @@ export default function NovelWorkspacePage() {
 
         <div className="flex items-center gap-3">
           {/* 保存状态指示器 */}
-          <div className="flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-full bg-white/40 border border-white/60">
+          <div className="flex items-center gap-2 text-xs font-patrick px-3 py-1.5 rounded-full bg-white border-2 border-dashed border-sketch-text-secondary/30">
             {saveStatus === "saving" ? (
               <>
-                <Loader2 className="w-3 h-3 animate-spin text-purple-600" />
-                <span className="text-purple-600">保存中...</span>
+                <Loader2 className="w-3 h-3 animate-spin text-sticky-blue" />
+                <span className="text-sticky-blue font-bold">保存中...</span>
               </>
             ) : saveStatus === "saved" ? (
               <>
-                <span className="w-2 h-2 rounded-full bg-green-500" />
-                <span className="text-gray-500">已保存</span>
+                <span className="w-2 h-2 rounded-full bg-sticky-green" />
+                <span className="text-sketch-text-muted">已保存</span>
               </>
             ) : (
               <>
-                <span className="w-2 h-2 rounded-full bg-amber-500" />
-                <span className="text-amber-600">未保存</span>
+                <span className="w-2 h-2 rounded-full bg-sticky-yellow" />
+                <span className="text-sketch-text-secondary">未保存</span>
               </>
             )}
           </div>
 
           <button
             onClick={() => saveNow()}
-            className="p-2 text-gray-600 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+            className="p-2 text-sketch-text-secondary hover:text-sketch-text-primary hover:bg-sticky-blue/30 rounded-lg border-2 border-dashed border-transparent hover:border-sketch-text-secondary/30 transition-all"
             title="手动保存 (Ctrl+S)"
           >
             <Save className="w-5 h-5" />
           </button>
-          
-          <div className="h-6 w-px bg-gray-300 mx-1" />
+
+          <div className="h-6 w-px bg-sketch-text-secondary/30 mx-1" />
 
           <button
             onClick={() => setRightPanelOpen(!rightPanelOpen)}
-            className={`p-2 rounded-lg transition-colors ${rightPanelOpen ? "bg-purple-100 text-purple-700" : "text-gray-500 hover:bg-gray-100"}`}
+            className={`p-2 rounded-lg border-2 transition-all ${
+              rightPanelOpen
+                ? "bg-sticky-blue border-sketch-text-primary text-sketch-text-primary shadow-sketch"
+                : "text-sketch-text-secondary border-dashed border-sketch-text-secondary/30 hover:border-sketch-text-primary hover:bg-sticky-blue/30"
+            }`}
             title="切换 AI 助手"
           >
             {rightPanelOpen ? <PanelRightClose className="w-5 h-5" /> : <PanelRightOpen className="w-5 h-5" />}
@@ -387,18 +392,17 @@ export default function NovelWorkspacePage() {
       </header>
 
       {/* 主工作区 (CSS Grid) */}
-      <div className="flex-1 grid overflow-hidden relative z-10"
-           style={{
-             gridTemplateColumns: (
-               `${leftPanelOpen ? `${sidebarWidth}px` : '0px'} 
-               1fr 
-               ${rightPanelOpen ? '320px' : '0px'}`
-             ),
-             transition: "grid-template-columns 0.4s cubic-bezier(0.16, 1, 0.3, 1)" // iOS 风格缓动
-           }}
+      <div
+        className="flex-1 grid overflow-hidden relative z-10"
+        style={{
+          gridTemplateColumns: `${leftPanelOpen ? `${sidebarWidth}px` : "0px"}
+               1fr
+               ${rightPanelOpen ? "320px" : "0px"}`,
+          transition: "grid-template-columns 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
+        }}
       >
         {/* === 左侧栏：章节列表 === */}
-        <aside className="border-r border-gray-200/60 bg-white/40 backdrop-blur-xl h-full flex flex-col overflow-hidden relative group">
+        <aside className="border-r-2 border-dashed border-sketch-text-secondary/30 bg-white/60 h-full flex flex-col overflow-hidden relative group">
           <div className="flex-1 overflow-hidden">
             <div style={{ width: sidebarWidth }} className="h-full">
               <EnhancedChapterList
@@ -413,10 +417,10 @@ export default function NovelWorkspacePage() {
               />
             </div>
           </div>
-          
+
           {/* 拖拽手柄 */}
           <div
-            className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-purple-400/50 transition-colors z-20"
+            className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-sticky-blue/50 transition-colors z-20"
             onMouseDown={(e) => {
               e.preventDefault();
               const startX = e.clientX;
@@ -426,11 +430,11 @@ export default function NovelWorkspacePage() {
                 setSidebarWidth(newWidth);
               };
               const handleMouseUp = () => {
-                document.removeEventListener('mousemove', handleMouseMove);
-                document.removeEventListener('mouseup', handleMouseUp);
+                document.removeEventListener("mousemove", handleMouseMove);
+                document.removeEventListener("mouseup", handleMouseUp);
               };
-              document.addEventListener('mousemove', handleMouseMove);
-              document.addEventListener('mouseup', handleMouseUp);
+              document.addEventListener("mousemove", handleMouseMove);
+              document.addEventListener("mouseup", handleMouseUp);
             }}
           />
         </aside>
@@ -439,7 +443,7 @@ export default function NovelWorkspacePage() {
         <div className="absolute left-4 bottom-4 z-50">
           <button
             onClick={() => setLeftPanelOpen(!leftPanelOpen)}
-            className="w-8 h-8 rounded-full bg-white shadow-lg border border-gray-200 flex items-center justify-center text-gray-500 hover:text-purple-600 transition-transform hover:scale-110"
+            className="w-8 h-8 rounded-full bg-white shadow-sketch border-2 border-sketch-text-secondary/30 flex items-center justify-center text-sketch-text-secondary hover:text-sketch-text-primary hover:border-sketch-text-primary transition-all hover:scale-110"
             title={leftPanelOpen ? "折叠侧边栏" : "展开侧边栏"}
           >
             {leftPanelOpen ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeftOpen className="w-4 h-4" />}
@@ -452,32 +456,31 @@ export default function NovelWorkspacePage() {
           <div className={`h-full flex flex-col ${activeTab === "editor" ? "block" : "hidden"}`}>
             {currentChapter ? (
               <div className="flex-1 overflow-y-auto custom-scrollbar">
-                <div className="max-w-3xl mx-auto py-12 px-8 min-h-full bg-white shadow-sm my-6 rounded-lg border border-gray-100">
+                <div className="max-w-3xl mx-auto py-12 px-8 min-h-full bg-white shadow-sketch my-6 rounded-xl border-2 border-sketch-text-secondary/20">
                   <input
                     type="text"
                     value={chapterTitle}
                     onChange={(e) => setChapterTitle(e.target.value)}
-                    className="w-full text-3xl font-bold text-gray-900 placeholder:text-gray-300 border-none focus:ring-0 p-0 mb-8 bg-transparent"
+                    className="w-full text-3xl font-caveat font-bold text-sketch-text-primary placeholder:text-sketch-text-muted/50 border-none focus:ring-0 p-0 mb-8 bg-transparent"
                     placeholder="在此输入章节标题..."
                   />
                   <TiptapEditor
                     content={editorContent}
                     onChange={setEditorContent}
                     onWordCountChange={handleWordCountChange}
-                    className="min-h-[500px]"
+                    className="min-h-[500px] font-patrick"
                   />
                 </div>
               </div>
             ) : (
-              <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
-                <Sparkles className="w-16 h-16 mb-4 text-purple-200" />
-                <p className="text-lg font-medium text-gray-500">选择或创建一个章节开始写作</p>
-                <button
-                  onClick={handleChapterCreate}
-                  className="mt-4 px-6 py-2 bg-purple-600 text-white rounded-full font-medium hover:bg-purple-700 transition-all hover:shadow-lg hover:-translate-y-0.5"
-                >
+              <div className="flex-1 flex flex-col items-center justify-center">
+                <div className="w-20 h-20 rounded-xl bg-sticky-blue border-2 border-dashed border-sketch-text-secondary/30 flex items-center justify-center mb-6 shadow-sketch">
+                  <Sparkles className="w-10 h-10 text-sketch-text-primary" />
+                </div>
+                <p className="text-lg font-patrick text-sketch-text-secondary mb-4">选择或创建一个章节开始写作</p>
+                <Button variant="sketch" onClick={handleChapterCreate}>
                   新建章节
-                </button>
+                </Button>
               </div>
             )}
           </div>
@@ -505,7 +508,7 @@ export default function NovelWorkspacePage() {
             </div>
           )}
 
-          {/* 世界观 Tab（哼，让笨蛋管理世界设定更方便～）*/}
+          {/* 世界观 Tab */}
           {activeTab === "world" && (
             <div className="h-full overflow-y-auto p-8">
               <WorldSettingsPanel novelId={novelId} />
@@ -514,14 +517,14 @@ export default function NovelWorkspacePage() {
         </main>
 
         {/* === 右侧栏：AI 助手 === */}
-        <aside className="border-l border-gray-200/60 bg-white/60 backdrop-blur-xl h-full overflow-hidden relative">
+        <aside className="border-l-2 border-dashed border-sketch-text-secondary/30 bg-white/60 h-full overflow-hidden relative">
           <div className="w-[320px] h-full overflow-hidden">
             <AIAssistant
               novelId={novelId}
               currentChapter={currentChapter}
               editorContent={editorContent}
               onContentInsert={handleContentInsert}
-              novelOutline={novel?.outline}  // 关键修复：传递小说大纲用于整章生成
+              novelOutline={novel?.outline}
             />
           </div>
         </aside>

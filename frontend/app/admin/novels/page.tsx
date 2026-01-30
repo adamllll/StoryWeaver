@@ -116,42 +116,43 @@ export default function NovelsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-gray-900">内容管理</h2>
-          <p className="text-sm text-gray-500">管理平台上的所有小说作品</p>
+          <h2 className="text-2xl font-caveat font-bold tracking-tight text-sketch-text-primary">内容管理</h2>
+          <p className="text-sm font-patrick text-sketch-text-secondary">管理平台上的所有小说作品</p>
         </div>
         <div className="relative w-64">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
+          <Search className="absolute left-2 top-2.5 h-4 w-4 text-sketch-text-muted" />
           <Input
             placeholder="搜索小说标题..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-8 bg-white/50 backdrop-blur-sm border-gray-200"
+            className="pl-8"
+            variant="sketch"
           />
         </div>
       </div>
 
-      <div className="rounded-xl border border-gray-200 bg-white/60 backdrop-blur-xl shadow-sm overflow-hidden">
+      <div className="rounded-xl border-2 border-dashed border-sketch-text-secondary/20 bg-white shadow-sketch overflow-hidden">
         <Table>
-          <TableHeader className="bg-gray-50/50">
+          <TableHeader className="bg-sticky-pink-light/30">
             <TableRow>
-              <TableHead className="w-[300px]">作品信息</TableHead>
-              <TableHead>作者</TableHead>
-              <TableHead>状态</TableHead>
-              <TableHead>数据</TableHead>
-              <TableHead>更新时间</TableHead>
-              <TableHead className="text-right">操作</TableHead>
+              <TableHead className="w-[300px] font-patrick">作品信息</TableHead>
+              <TableHead className="font-patrick">作者</TableHead>
+              <TableHead className="font-patrick">状态</TableHead>
+              <TableHead className="font-patrick">数据</TableHead>
+              <TableHead className="font-patrick">更新时间</TableHead>
+              <TableHead className="text-right font-patrick">操作</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center text-gray-500">
+                <TableCell colSpan={6} className="h-24 text-center text-sketch-text-secondary font-patrick">
                   加载中...
                 </TableCell>
               </TableRow>
             ) : novels.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center text-gray-500">
+                <TableCell colSpan={6} className="h-24 text-center text-sketch-text-secondary font-patrick">
                   没有找到相关作品
                 </TableCell>
               </TableRow>
@@ -160,7 +161,7 @@ export default function NovelsPage() {
                 <TableRow key={novel.id}>
                   <TableCell>
                     <div className="flex items-center gap-3">
-                      <div className="h-10 w-8 flex-shrink-0 overflow-hidden rounded bg-gray-100 flex items-center justify-center text-gray-400">
+                      <div className="h-10 w-8 flex-shrink-0 overflow-hidden rounded-lg border-2 border-dashed border-sketch-text-secondary/20 bg-sticky-yellow-light flex items-center justify-center text-sketch-text-muted">
                         {novel.cover_url ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={novel.cover_url} alt={novel.title} className="h-full w-full object-cover" />
@@ -169,33 +170,30 @@ export default function NovelsPage() {
                         )}
                       </div>
                       <div className="flex flex-col">
-                        <span className="font-medium text-gray-900 truncate max-w-[200px]" title={novel.title}>
+                        <span className="font-patrick font-medium text-sketch-text-primary truncate max-w-[200px]" title={novel.title}>
                           {novel.title}
                         </span>
-                        <Badge variant="outline" className="w-fit text-[10px] px-1 py-0 h-4 mt-1 font-normal text-gray-500">
+                        <Badge variant="sticky-yellow" className="w-fit text-[10px] px-1 py-0 h-4 mt-1">
                           {novel.category}
                         </Badge>
                       </div>
                     </div>
                   </TableCell>
                   <TableCell>
-                    <span className="text-sm text-gray-700">{novel.author_username}</span>
+                    <span className="text-sm text-sketch-text-primary font-patrick">{novel.author_username}</span>
                   </TableCell>
                   <TableCell>
-                    <Badge 
-                      variant={novel.status === "published" ? "default" : "secondary"}
-                      className={novel.status === "published" ? "bg-green-100 text-green-700 hover:bg-green-200" : "bg-gray-100 text-gray-600"}
-                    >
+                    <Badge variant={novel.status === "published" ? "sticky-green" : "secondary"}>
                       {novel.status === "published" ? "已发布" : "草稿"}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <div className="flex flex-col text-xs text-gray-500">
+                    <div className="flex flex-col text-xs text-sketch-text-secondary font-patrick">
                       <span>{novel.chapter_count} 章</span>
                       <span>{(novel.word_count / 10000).toFixed(1)}万 字</span>
                     </div>
                   </TableCell>
-                  <TableCell className="text-gray-500 text-sm">
+                  <TableCell className="text-sketch-text-secondary text-sm font-patrick">
                     {new Date(novel.updated_at).toLocaleDateString()}
                   </TableCell>
                   <TableCell className="text-right">
@@ -236,13 +234,13 @@ export default function NovelsPage() {
         </Table>
 
          {/* Pagination */}
-         <div className="flex items-center justify-between px-4 py-4 border-t border-gray-100 bg-gray-50/30">
-          <div className="text-sm text-gray-500">
+         <div className="flex items-center justify-between px-4 py-4 border-t-2 border-dashed border-sketch-text-secondary/20 bg-sticky-pink-light/20">
+          <div className="text-sm text-sketch-text-secondary font-patrick">
             显示 {(page - 1) * PAGE_SIZE + 1} 到 {Math.min(page * PAGE_SIZE, total)} 条，共 {total} 条
           </div>
           <div className="flex gap-2">
             <Button
-              variant="outline"
+              variant="sketch-secondary"
               size="sm"
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
@@ -250,7 +248,7 @@ export default function NovelsPage() {
               上一页
             </Button>
             <Button
-              variant="outline"
+              variant="sketch-secondary"
               size="sm"
               onClick={() => setPage((p) => p + 1)}
               disabled={page * PAGE_SIZE >= total}

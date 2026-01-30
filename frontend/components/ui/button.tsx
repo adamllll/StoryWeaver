@@ -18,6 +18,15 @@ const buttonVariants = cva(
           "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
+        // Sketch variants
+        sketch:
+          "font-caveat text-xl font-bold bg-sticky-yellow border-2 border-sketch-text-primary rounded-xl shadow-sketch transition-all duration-sketch ease-sketch hover:-translate-y-0.5 hover:shadow-sketch-lg active:translate-y-px active:shadow-sketch-sm motion-reduce:transform-none",
+        "sketch-secondary":
+          "font-patrick text-base bg-white border-2 border-dashed border-sketch-text-secondary rounded-xl transition-all duration-sketch ease-sketch hover:border-solid hover:border-sketch-text-primary motion-reduce:transform-none",
+        "sketch-ghost":
+          "font-patrick text-base text-sketch-text-primary bg-transparent border-none rounded-xl transition-all duration-sketch ease-sketch hover:bg-sticky-yellow-light/30 motion-reduce:transform-none",
+        "sketch-destructive":
+          "font-caveat text-xl font-bold bg-sticky-pink border-2 border-red-700 rounded-xl shadow-sketch transition-all duration-sketch ease-sketch hover:-translate-y-0.5 hover:shadow-sketch-lg active:translate-y-px active:shadow-sketch-sm motion-reduce:transform-none",
       },
       size: {
         default: "h-10 px-4 py-2",
@@ -37,17 +46,38 @@ export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
   asChild?: boolean;
+  loading?: boolean;
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, ...props }, ref) => {
+  ({ className, variant, size, asChild = false, loading, disabled, children, ...props }, ref) => {
     const Comp = asChild ? Slot : "button";
+    const isSketch = variant?.startsWith("sketch");
+
     return (
       <Comp
         className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
+        disabled={disabled || loading}
         {...props}
-      />
+      >
+        {loading && isSketch ? (
+          <span className="flex items-center gap-2">
+            <svg
+              className="animate-spin h-4 w-4"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <circle cx="12" cy="12" r="10" strokeDasharray="32" strokeDashoffset="12" />
+            </svg>
+            {children}
+          </span>
+        ) : (
+          children
+        )}
+      </Comp>
     );
   }
 );

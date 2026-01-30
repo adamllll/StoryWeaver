@@ -1,10 +1,5 @@
 /**
- * 小说详情页 - Zen-iOS Hybrid 重构版
- * 
- * 核心特性：
- * - 沉浸式高斯模糊背景
- * - 悬浮式信息卡片
- * - 播放列表风格的章节目录
+ * 小说详情页 - Sketch 手绘风格
  */
 
 "use client";
@@ -31,6 +26,8 @@ import { novelsApi, NovelDetail, ApiError } from "@/lib/api";
 import { useToast } from "@/components/ui/use-toast";
 import { markdownToHtml } from "@/lib/markdown";
 import { useAuthStore } from "@/lib/store";
+import { Button } from "@/components/ui/button";
+import { Header } from "@/components/layout/Header";
 
 export default function NovelDetailPage() {
   const params = useParams();
@@ -62,72 +59,52 @@ export default function NovelDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-ios-bg">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-10 h-10 animate-spin text-purple-500" />
-          <span className="text-gray-500 font-medium">正在载入故事...</span>
+      <div className="min-h-screen flex items-center justify-center grid-paper-bg">
+        <div className="bg-white border-2 border-sketch-text-primary rounded-xl p-8 shadow-sketch flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-2 border-dashed border-sketch-text-secondary rounded-full flex items-center justify-center animate-spin">
+            <BookOpen className="w-5 h-5 text-sketch-text-secondary" />
+          </div>
+          <span className="font-patrick text-sketch-text-secondary">正在载入故事...</span>
         </div>
       </div>
     );
   }
 
-  if (!novel) return null;
+  if (!novel) {
+    return (
+      <div className="min-h-screen flex items-center justify-center grid-paper-bg">
+        <div className="bg-white border-2 border-sketch-text-primary rounded-xl p-8 shadow-sketch text-center max-w-md">
+          <div className="w-20 h-20 bg-sticky-yellow-light border-2 border-dashed border-sketch-text-secondary rounded-full flex items-center justify-center mx-auto mb-6">
+            <BookOpen className="w-8 h-8 text-sketch-text-secondary" />
+          </div>
+          <h2 className="font-caveat text-2xl font-bold text-sketch-text-primary mb-2">小说不存在</h2>
+          <p className="font-patrick text-sketch-text-secondary mb-6">这本小说可能已被删除或不存在</p>
+          <Link href="/novels">
+            <Button variant="sketch">返回小说列表</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   const firstChapter = novel.chapters?.[0] || null;
 
   return (
-    <div className="min-h-screen bg-ios-bg relative overflow-x-hidden">
-      {/* 沉浸式模糊背景 */}
-      <div className="absolute inset-0 h-[60vh] overflow-hidden z-0">
-        {novel.cover_url && (
-          <div
-            className="w-full h-full bg-cover bg-center opacity-30 blur-[100px] scale-110"
-            style={{ backgroundImage: `url(${novel.cover_url})` }}
-          />
-        )}
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-ios-bg" />
-      </div>
+    <div className="min-h-screen grid-paper-bg">
+      <Header />
 
-      {/* 导航栏 */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-white/10 backdrop-blur-md border-b border-white/20">
-        <div className="container flex h-16 items-center justify-between">
-          <Link 
-            href="/novels" 
-            className="flex items-center gap-2 text-gray-800 hover:text-purple-700 transition-colors px-3 py-1.5 rounded-full hover:bg-white/40"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span className="text-sm font-medium">返回列表</span>
-          </Link>
-          
-          <div className="flex items-center gap-2">
-            <button className="p-2 rounded-full hover:bg-white/40 text-gray-700 transition-colors">
-              <Share2 className="w-4 h-4" />
-            </button>
-            {isAuthenticated && user ? (
-              <Link href={`/workspace/${novelId}`} className="btn-primary text-xs px-4 py-2 h-9 ml-2">
-                工作台
-              </Link>
-            ) : (
-              <Link href="/login" className="btn-primary text-xs px-4 py-2 h-9 ml-2">
-                登录
-              </Link>
-            )}
-          </div>
-        </div>
-      </header>
-
-      <main className="container pt-28 pb-20 relative z-10">
-        <motion.div 
+      <main className="container pt-28 pb-20">
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
           className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-10"
         >
-          {/* 左侧：封面卡片 */}
+          {/* Left: Cover Card */}
           <div className="flex flex-col gap-6">
-            <div className="glass rounded-ios-2xl p-6 shadow-ios-float bg-white/60 backdrop-blur-xl border-white/60">
-              {/* 封面图 */}
-              <div className="relative aspect-[3/4] rounded-ios-xl overflow-hidden shadow-lg mb-6 group">
+            <div className="bg-sticky-yellow-light border-2 border-sketch-text-primary rounded-xl p-6 shadow-sketch">
+              {/* Cover Image */}
+              <div className="relative aspect-[3/4] rounded-xl overflow-hidden border-2 border-sketch-text-secondary shadow-sketch mb-6 group">
                 {novel.cover_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -136,182 +113,183 @@ export default function NovelDetailPage() {
                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                   />
                 ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-purple-100 to-indigo-100 flex items-center justify-center">
-                    <BookOpen className="w-20 h-20 text-purple-200" />
+                  <div className="w-full h-full bg-sticky-yellow/50 flex items-center justify-center">
+                    <BookOpen className="w-20 h-20 text-sketch-text-muted" />
                   </div>
                 )}
-                
-                {/* 互动标记 */}
+
+                {/* Interactive Tag */}
                 {novel.is_interactive && (
                   <div className="absolute top-4 right-4">
-                    <span className="px-3 py-1.5 bg-amber-400/90 backdrop-blur-md text-white text-xs font-bold rounded-full shadow-lg flex items-center gap-1.5 animate-pulse-subtle">
-                      <Sparkles className="w-3.5 h-3.5 fill-white" />
+                    <span className="px-3 py-1.5 bg-sticky-pink border-2 border-sketch-text-primary text-sketch-text-primary font-patrick text-xs font-bold rounded-full shadow-sketch flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5" />
                       互动小说
                     </span>
                   </div>
                 )}
               </div>
 
-              {/* 核心数据 */}
+              {/* Stats */}
               <div className="grid grid-cols-2 gap-3 mb-6">
-                <div className="bg-white/50 rounded-xl p-3 text-center border border-white/60">
-                  <div className="flex items-center justify-center gap-1.5 text-gray-400 text-xs mb-1">
+                <div className="bg-white/70 border-2 border-dashed border-sketch-text-secondary/50 rounded-xl p-3 text-center">
+                  <div className="flex items-center justify-center gap-1.5 text-sketch-text-muted font-patrick text-xs mb-1">
                     <FileText className="w-3.5 h-3.5" />
                     <span>章节</span>
                   </div>
-                  <span className="text-lg font-bold text-gray-800">{novel.chapter_count}</span>
+                  <span className="font-caveat text-xl font-bold text-sketch-text-primary">{novel.chapter_count}</span>
                 </div>
-                <div className="bg-white/50 rounded-xl p-3 text-center border border-white/60">
-                  <div className="flex items-center justify-center gap-1.5 text-gray-400 text-xs mb-1">
+                <div className="bg-white/70 border-2 border-dashed border-sketch-text-secondary/50 rounded-xl p-3 text-center">
+                  <div className="flex items-center justify-center gap-1.5 text-sketch-text-muted font-patrick text-xs mb-1">
                     <Clock className="w-3.5 h-3.5" />
                     <span>字数</span>
                   </div>
-                  <span className="text-lg font-bold text-gray-800">{(novel.word_count / 1000).toFixed(1)}k</span>
+                  <span className="font-caveat text-xl font-bold text-sketch-text-primary">{(novel.word_count / 1000).toFixed(1)}k</span>
                 </div>
               </div>
 
-              {/* 行动按钮 */}
+              {/* Action Buttons */}
               <div className="space-y-3">
                 {firstChapter ? (
-                  <Link
-                    href={`/read/${novel.id}/${firstChapter.id}`}
-                    className="w-full py-3.5 rounded-ios-xl bg-gray-900 text-white font-bold text-center flex items-center justify-center gap-2 shadow-lg shadow-gray-300/50 hover:bg-black hover:scale-[1.02] active:scale-[0.98] transition-all"
-                  >
-                    <Play className="w-4 h-4 fill-white" />
-                    开始阅读
+                  <Link href={`/read/${novel.id}/${firstChapter.id}`}>
+                    <Button variant="sketch" size="lg" className="w-full">
+                      <Play className="w-4 h-4 mr-2" />
+                      开始阅读
+                    </Button>
                   </Link>
                 ) : (
-                  <button disabled className="w-full py-3.5 rounded-ios-xl bg-gray-200 text-gray-400 font-bold flex items-center justify-center gap-2 cursor-not-allowed">
+                  <Button variant="sketch" size="lg" disabled className="w-full">
                     暂无章节
-                  </button>
+                  </Button>
                 )}
-                <button className="w-full py-3.5 rounded-ios-xl bg-white border border-gray-200 text-gray-700 font-bold flex items-center justify-center gap-2 hover:bg-gray-50 active:scale-[0.98] transition-all">
-                  <BookmarkPlus className="w-4 h-4" />
+                <Button variant="sketch-secondary" size="lg" className="w-full">
+                  <BookmarkPlus className="w-4 h-4 mr-2" />
                   加入书架
-                </button>
+                </Button>
               </div>
             </div>
 
-            {/* 作者信息小卡片 */}
-            <div className="glass rounded-ios-xl p-4 flex items-center gap-4 border-white/60">
-              <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-purple-100 to-indigo-100 flex items-center justify-center shadow-inner">
-                <User className="w-5 h-5 text-purple-500" />
+            {/* Author Card */}
+            <div className="bg-white border-2 border-sketch-text-primary rounded-xl p-4 shadow-sketch flex items-center gap-4">
+              <div className="w-12 h-12 rounded-full bg-sticky-yellow-light border-2 border-sketch-text-secondary flex items-center justify-center">
+                <User className="w-5 h-5 text-sketch-text-secondary" />
               </div>
               <div>
-                <div className="text-xs text-gray-400 mb-0.5">作者</div>
-                <div className="font-bold text-gray-900">{novel.author.username}</div>
+                <div className="font-patrick text-xs text-sketch-text-muted mb-0.5">作者</div>
+                <div className="font-caveat font-bold text-lg text-sketch-text-primary">{novel.author.username}</div>
               </div>
-              <button className="ml-auto text-xs font-semibold text-purple-600 bg-purple-50 px-3 py-1.5 rounded-full hover:bg-purple-100 transition-colors">
+              <Button variant="sketch-ghost" size="sm" className="ml-auto">
                 关注
-              </button>
+              </Button>
             </div>
           </div>
 
-          {/* 右侧：详细内容 */}
+          {/* Right: Content */}
           <div className="space-y-8">
-            {/* 标题区 */}
+            {/* Title Section */}
             <div>
               <div className="flex items-center gap-3 mb-4">
-                <span className="px-3 py-1 bg-purple-100 text-purple-700 text-xs font-bold rounded-full">
+                <span className="px-3 py-1 bg-sticky-yellow border border-sketch-text-secondary font-patrick text-sketch-text-primary text-xs font-bold rounded-full">
                   {novel.category}
                 </span>
-                <span className={`px-3 py-1 text-xs font-bold rounded-full ${
-                  novel.status === "published" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"
+                <span className={`px-3 py-1 font-patrick text-xs font-bold rounded-full border ${
+                  novel.status === "published"
+                    ? "bg-sticky-green-light border-sticky-green text-sketch-text-primary"
+                    : "bg-gray-100 border-gray-300 text-sketch-text-muted"
                 }`}>
                   {novel.status === "published" ? "连载中" : "草稿"}
                 </span>
               </div>
-              <h1 className="text-4xl font-bold text-gray-900 mb-6 leading-tight">{novel.title}</h1>
-              
-              {/* 简介卡片 */}
-              <div className="glass rounded-ios-2xl p-8 border-white/60 relative overflow-hidden">
-                <div className="flex items-center gap-2 mb-4 text-gray-900 font-bold">
-                  <Info className="w-4 h-4 text-purple-500" />
+              <h1 className="font-caveat text-5xl font-bold text-sketch-text-primary mb-6 leading-tight">{novel.title}</h1>
+
+              {/* Description Card */}
+              <div className="bg-white border-2 border-sketch-text-primary rounded-xl p-8 shadow-sketch">
+                <div className="flex items-center gap-2 mb-4 font-caveat text-xl font-bold text-sketch-text-primary">
+                  <Info className="w-5 h-5 text-sticky-yellow" />
                   故事简介
                 </div>
-                <div 
-                  className="prose prose-base text-gray-600 leading-relaxed font-serif max-w-none"
+                <div
+                  className="font-patrick text-sketch-text-secondary leading-relaxed prose prose-base max-w-none"
                   dangerouslySetInnerHTML={{ __html: markdownToHtml(novel.description || "暂无简介") }}
                 />
-                {/* 装饰 */}
-                <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/5 blur-3xl pointer-events-none" />
               </div>
             </div>
 
-            {/* 角色卡片组 (如果存在) */}
+            {/* Characters (if exist) */}
             {novel.characters && novel.characters.length > 0 && (
               <div>
-                 <h2 className="text-lg font-bold text-gray-900 mb-4 px-2">登场角色</h2>
-                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {novel.characters.slice(0, 6).map((char) => (
-                      <div key={char.id} className="glass rounded-ios-xl p-3 flex items-center gap-3 border-white/60 hover:border-purple-200 transition-colors">
-                         <div className="w-10 h-10 rounded-full bg-gray-100 overflow-hidden flex-shrink-0">
-                           {char.avatar ? (
-                             // eslint-disable-next-line @next/next/no-img-element
-                             <img src={char.avatar} alt={char.name} className="w-full h-full object-cover" />
-                           ) : (
-                             <div className="w-full h-full flex items-center justify-center bg-gray-200">
-                               <User className="w-4 h-4 text-gray-400" />
-                             </div>
-                           )}
-                         </div>
-                         <div className="min-w-0">
-                            <div className="font-bold text-gray-800 text-sm truncate">{char.name}</div>
-                            <div className="text-xs text-gray-500 truncate">{char.role_type}</div>
-                         </div>
+                <h2 className="font-caveat text-2xl font-bold text-sketch-text-primary mb-4 px-2">登场角色</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {novel.characters.slice(0, 6).map((char) => (
+                    <div key={char.id} className="bg-white border-2 border-dashed border-sketch-text-secondary/50 rounded-xl p-3 flex items-center gap-3 hover:border-solid hover:border-sketch-text-primary transition-all duration-sketch">
+                      <div className="w-10 h-10 rounded-full bg-sticky-yellow-light border border-sketch-text-secondary overflow-hidden flex-shrink-0">
+                        {char.avatar ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={char.avatar} alt={char.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <User className="w-4 h-4 text-sketch-text-muted" />
+                          </div>
+                        )}
                       </div>
-                    ))}
-                 </div>
+                      <div className="min-w-0">
+                        <div className="font-caveat font-bold text-sketch-text-primary truncate">{char.name}</div>
+                        <div className="font-patrick text-xs text-sketch-text-muted truncate">{char.role_type}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 
-            {/* 章节目录 */}
+            {/* Chapter List */}
             <div>
               <div className="flex items-center justify-between mb-4 px-2">
-                 <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                   <List className="w-4 h-4" />
-                   目录
-                   <span className="text-sm font-normal text-gray-400 ml-1">({novel.chapters?.length || 0}章)</span>
-                 </h2>
-                 <button className="text-xs font-semibold text-purple-600 hover:text-purple-700">倒序查看</button>
+                <h2 className="font-caveat text-2xl font-bold text-sketch-text-primary flex items-center gap-2">
+                  <List className="w-5 h-5" />
+                  目录
+                  <span className="font-patrick text-sm font-normal text-sketch-text-muted ml-1">({novel.chapters?.length || 0}章)</span>
+                </h2>
+                <button className="font-patrick text-xs font-semibold text-sketch-text-primary hover:underline">倒序查看</button>
               </div>
 
-              <div className="bg-white/60 backdrop-blur-xl rounded-ios-2xl border border-white/60 overflow-hidden">
+              <div className="bg-white border-2 border-sketch-text-primary rounded-xl shadow-sketch overflow-hidden">
                 {(!novel.chapters || novel.chapters.length === 0) ? (
-                  <div className="text-center py-12 text-gray-400">
-                    <FileText className="w-10 h-10 mx-auto mb-3 opacity-30" />
-                    <p className="text-sm">作者正在努力码字中...</p>
+                  <div className="text-center py-12">
+                    <div className="w-16 h-16 bg-sticky-yellow-light border-2 border-dashed border-sketch-text-secondary rounded-full flex items-center justify-center mx-auto mb-4">
+                      <FileText className="w-6 h-6 text-sketch-text-muted" />
+                    </div>
+                    <p className="font-patrick text-sketch-text-muted">作者正在努力码字中...</p>
                   </div>
                 ) : (
-                  <div className="divide-y divide-gray-100">
+                  <div className="divide-y-2 divide-dashed divide-sketch-text-muted/20">
                     {novel.chapters.map((chapter, index) => (
                       <Link
                         key={chapter.id}
                         href={`/read/${novel.id}/${chapter.id}`}
-                        className="group flex items-center justify-between p-4 hover:bg-white/80 transition-all duration-200"
+                        className="group flex items-center justify-between p-4 hover:bg-sticky-yellow-light/50 transition-all duration-sketch"
                       >
                         <div className="flex items-center gap-4 min-w-0">
-                          <span className="w-6 text-center text-sm font-medium text-gray-400 group-hover:text-purple-500 transition-colors">
+                          <span className="w-8 h-8 flex items-center justify-center rounded-full bg-sticky-yellow-light border border-sketch-text-secondary font-caveat font-bold text-sketch-text-secondary group-hover:bg-sticky-yellow group-hover:text-sketch-text-primary transition-colors">
                             {index + 1}
                           </span>
                           <div className="min-w-0">
-                            <div className="font-medium text-gray-800 group-hover:text-purple-700 transition-colors truncate pr-4">
+                            <div className="font-patrick font-medium text-sketch-text-primary group-hover:text-sticky-pink transition-colors truncate pr-4">
                               {chapter.title}
                             </div>
                             <div className="flex items-center gap-2 mt-0.5">
-                              <span className="text-[10px] text-gray-400">
+                              <span className="font-patrick text-xs text-sketch-text-muted">
                                 {chapter.word_count} 字
                               </span>
                               {chapter.is_branch && (
-                                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-600 border border-amber-100">
+                                <span className="px-1.5 py-0.5 rounded font-patrick text-[10px] font-bold bg-sticky-pink-light text-sketch-text-primary border border-sticky-pink">
                                   分支
                                 </span>
                               )}
                             </div>
                           </div>
                         </div>
-                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-gray-300 group-hover:bg-purple-50 group-hover:text-purple-600 transition-all">
-                           <Play className="w-3.5 h-3.5 ml-0.5 fill-current opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-sketch-text-muted group-hover:bg-sticky-yellow group-hover:text-sketch-text-primary transition-all">
+                          <Play className="w-3.5 h-3.5 ml-0.5 opacity-0 group-hover:opacity-100 transition-opacity" />
                         </div>
                       </Link>
                     ))}
@@ -323,9 +301,9 @@ export default function NovelDetailPage() {
         </motion.div>
       </main>
 
-      <footer className="bg-white/30 backdrop-blur-md border-t border-white/40 py-8 relative z-10">
-        <div className="container text-center text-gray-500 text-sm">
-          <p>© 2025 织梦者 (StoryWeaver). Created by Claude, Gemini & Codex.</p>
+      <footer className="bg-white/70 border-t-2 border-dashed border-sketch-text-muted/30 py-12">
+        <div className="container text-center">
+          <p className="font-patrick text-sketch-text-muted text-sm">© 2025 织梦者 (StoryWeaver). Created by Claude, Gemini & Codex.</p>
         </div>
       </footer>
     </div>

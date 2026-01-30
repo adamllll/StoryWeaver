@@ -31,50 +31,50 @@ export default function AdminDashboard() {
       value: stats?.total_users,
       subValue: `24h活跃: ${stats?.active_users_24h || 0}`,
       icon: Users,
-      color: "text-blue-600",
-      bg: "bg-blue-100",
+      color: "text-sketch-text-primary",
+      bg: "bg-sticky-blue",
     },
     {
       title: "小说总数",
       value: stats?.total_novels,
       subValue: `${stats?.total_chapters || 0} 章节`,
       icon: BookOpen,
-      color: "text-purple-600",
-      bg: "bg-purple-100",
+      color: "text-sketch-text-primary",
+      bg: "bg-sticky-pink",
     },
     {
       title: "总字数",
       value: stats?.total_words ? (stats.total_words / 10000).toFixed(1) + "万" : 0,
       subValue: "全平台累计",
       icon: FileText,
-      color: "text-amber-600",
-      bg: "bg-amber-100",
+      color: "text-sketch-text-primary",
+      bg: "bg-sticky-yellow",
     },
     {
       title: "冒险模式",
       value: stats?.total_adventures,
       subValue: `24h活跃: ${stats?.active_adventures_24h || 0}`,
       icon: Gamepad2,
-      color: "text-emerald-600",
-      bg: "bg-emerald-100",
+      color: "text-sketch-text-primary",
+      bg: "bg-sticky-green",
     },
   ];
 
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="text-3xl font-bold tracking-tight text-gray-900">仪表盘</h2>
-        <p className="text-gray-500 mt-2">欢迎回来，管理员。这里是平台的各项核心指标。</p>
+        <h2 className="text-3xl font-caveat font-bold tracking-tight text-sketch-text-primary">仪表盘</h2>
+        <p className="text-sketch-text-secondary font-patrick mt-2">欢迎回来，管理员。这里是平台的各项核心指标。</p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         {statCards.map((card, index) => (
-          <Card key={index} className="border-gray-100 bg-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] backdrop-blur-xl transition-all hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:-translate-y-1">
+          <Card key={index} className="border-2 border-dashed border-sketch-text-secondary/20 bg-white shadow-sketch transition-all hover:shadow-sketch-lg hover:-translate-y-1">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-gray-500">
+              <CardTitle className="text-sm font-patrick text-sketch-text-secondary">
                 {card.title}
               </CardTitle>
-              <div className={`p-2 rounded-full ${card.bg}`}>
+              <div className={`p-2 rounded-xl border-2 border-dashed border-sketch-text-secondary/20 ${card.bg}`}>
                 <card.icon className={`h-4 w-4 ${card.color}`} />
               </div>
             </CardHeader>
@@ -86,8 +86,8 @@ export default function AdminDashboard() {
                 </div>
               ) : (
                 <>
-                  <div className="text-2xl font-bold tracking-tight text-gray-900">{card.value}</div>
-                  <p className="text-xs text-gray-500 mt-1 font-medium">
+                  <div className="text-2xl font-caveat font-bold tracking-tight text-sketch-text-primary">{card.value}</div>
+                  <p className="text-xs text-sketch-text-muted font-patrick mt-1">
                     {card.subValue}
                   </p>
                 </>

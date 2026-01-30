@@ -61,15 +61,15 @@ export function AdminSidebar() {
   };
 
   return (
-    <aside className="fixed left-0 top-0 z-40 h-screen w-64 border-r border-gray-200/50 bg-white/80 backdrop-blur-xl transition-transform">
+    <aside className="fixed left-0 top-0 z-40 h-screen w-64 border-r-2 border-dashed border-sketch-text-secondary/30 bg-white/95 transition-transform">
       <div className="flex h-full flex-col justify-between px-4 py-6">
         <div>
           {/* Header */}
           <div className="mb-10 px-4 flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-black text-white">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-sticky-blue border-2 border-dashed border-sketch-text-secondary/30 text-sketch-text-primary">
               <Shield className="h-5 w-5" />
             </div>
-            <span className="text-xl font-bold tracking-tight text-gray-900">
+            <span className="text-xl font-caveat font-bold tracking-tight text-sketch-text-primary">
               Admin
             </span>
           </div>
@@ -83,16 +83,16 @@ export function AdminSidebar() {
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    "group flex items-center rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 ease-in-out",
+                    "group flex items-center rounded-xl px-4 py-3 text-sm font-patrick transition-all duration-200 ease-in-out border-2",
                     isActive
-                      ? "bg-gray-100/80 text-gray-900 shadow-sm ring-1 ring-gray-200/50"
-                      : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
+                      ? "bg-sticky-blue border-sketch-text-primary/20 text-sketch-text-primary shadow-sketch-sm"
+                      : "text-sketch-text-secondary hover:bg-sticky-blue-light hover:text-sketch-text-primary border-transparent"
                   )}
                 >
                   <item.icon
                     className={cn(
                       "mr-3 h-5 w-5 transition-colors",
-                      isActive ? "text-gray-900" : "text-gray-400 group-hover:text-gray-900"
+                      isActive ? "text-sketch-text-primary" : "text-sketch-text-muted group-hover:text-sketch-text-primary"
                     )}
                   />
                   {item.title}
@@ -103,19 +103,19 @@ export function AdminSidebar() {
         </div>
 
         {/* Footer Actions */}
-        <div className="space-y-1 pt-4 border-t border-gray-100">
+        <div className="space-y-1 pt-4 border-t-2 border-dashed border-sketch-text-secondary/20">
            <Link
             href="/"
-            className="group flex w-full items-center rounded-xl px-4 py-3 text-sm font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-900 transition-all duration-200"
+            className="group flex w-full items-center rounded-xl px-4 py-3 text-sm font-patrick text-sketch-text-secondary hover:bg-sticky-yellow-light hover:text-sketch-text-primary transition-all duration-200"
           >
-            <Home className="mr-3 h-5 w-5 text-gray-400 group-hover:text-gray-900" />
+            <Home className="mr-3 h-5 w-5 text-sketch-text-muted group-hover:text-sketch-text-primary" />
             返回前台
           </Link>
           <button
             onClick={handleLogout}
-            className="group flex w-full items-center rounded-xl px-4 py-3 text-sm font-medium text-red-500 hover:bg-red-50 hover:text-red-600 transition-all duration-200"
+            className="group flex w-full items-center rounded-xl px-4 py-3 text-sm font-patrick text-sticky-pink hover:bg-sticky-pink-light hover:text-sketch-text-primary transition-all duration-200"
           >
-            <LogOut className="mr-3 h-5 w-5 text-red-400 group-hover:text-red-600" />
+            <LogOut className="mr-3 h-5 w-5 text-sticky-pink group-hover:text-sketch-text-primary" />
             退出登录
           </button>
         </div>

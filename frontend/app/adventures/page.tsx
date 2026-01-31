@@ -26,7 +26,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { SkeletonSketchGrid } from "@/components/ui/skeleton-sketch";
 import { adventureApi } from "@/lib/api";
 import { Adventure } from "@/lib/adventure-types";
 import { useAuthStore } from "@/lib/store";
@@ -197,36 +197,26 @@ export default function AdventuresPage() {
     show: { opacity: 1, y: 0 }
   };
 
-  // 骨架屏组件
-  const LoadingSkeleton = () => (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {[1, 2, 3].map(i => (
-        <Card key={i} className="p-6 border-none shadow-sm space-y-4">
-          <Skeleton className="h-6 w-3/4" />
-          <Skeleton className="h-4 w-1/2" />
-          <Skeleton className="h-20 w-full rounded-xl" />
-        </Card>
-      ))}
-    </div>
-  );
+  // Loading skeleton component using sketch style
+  const LoadingSkeleton = () => <SkeletonSketchGrid count={6} />;
 
-  // 空状态组件
+  // Empty state component with sketch style
   const EmptyState = ({ type }: { type: 'mine-ongoing' | 'mine-finished' | 'explore' }) => {
     const config = {
       'mine-ongoing': {
-        icon: <Gamepad2 className="w-12 h-12 text-gray-300" />,
+        icon: <Gamepad2 className="w-12 h-12 text-sketch-text-muted" />,
         title: "没有进行中的冒险",
         description: "一切伟大的传奇都始于第一步。现在就开始你的旅程吧！",
         showButton: true
       },
       'mine-finished': {
-        icon: <Trophy className="w-12 h-12 text-gray-300" />,
+        icon: <Trophy className="w-12 h-12 text-sketch-text-muted" />,
         title: "还没有完结的故事",
         description: "当一段旅程结束，它便成为了永恒的传说。去创造你的结局吧！",
         showButton: false
       },
       'explore': {
-        icon: <Compass className="w-12 h-12 text-gray-300" />,
+        icon: <Compass className="w-12 h-12 text-sketch-text-muted" />,
         title: "暂无社区冒险",
         description: "成为第一个分享冒险故事的人吧！",
         showButton: true
@@ -241,14 +231,14 @@ export default function AdventuresPage() {
         animate={{ opacity: 1, scale: 1 }}
         className="flex flex-col items-center justify-center py-20 text-center"
       >
-        <div className="w-32 h-32 bg-gray-100 rounded-full flex items-center justify-center mb-6">
+        <div className="w-32 h-32 bg-sticky-pink-light border-2 border-dashed border-sketch-text-secondary/30 rounded-full flex items-center justify-center mb-6">
           {icon}
         </div>
-        <h2 className="text-xl font-bold text-gray-900 mb-2">{title}</h2>
-        <p className="text-gray-500 max-w-sm mb-8">{description}</p>
+        <h2 className="text-2xl font-caveat font-bold text-sketch-text-primary mb-2">{title}</h2>
+        <p className="text-sketch-text-secondary font-patrick max-w-sm mb-8">{description}</p>
         {showButton && (
           <Link href="/adventures/new">
-            <Button size="lg" className="bg-purple-600 hover:bg-purple-700 shadow-xl shadow-purple-500/20">
+            <Button variant="sketch" size="lg">
               开启新篇章
             </Button>
           </Link>
@@ -257,7 +247,7 @@ export default function AdventuresPage() {
     );
   };
 
-  // 我的冒险卡片
+  // My adventure card with sticky-pink sketch style
   const MyAdventureCard = ({ adv }: { adv: Adventure }) => (
     <motion.div
       key={adv.id}
@@ -267,125 +257,113 @@ export default function AdventuresPage() {
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
     >
-      <Card className="group relative overflow-hidden border-gray-200 hover:border-purple-200 hover:shadow-xl hover:shadow-purple-500/5 transition-all duration-300 h-full flex flex-col">
-        <div className={cn(
-          "absolute top-0 left-0 right-0 h-1",
-          adv.is_finished ? "bg-gray-200" : "bg-gradient-to-r from-purple-400 to-blue-400"
-        )} />
-
-        <div className="p-6 flex-1 flex flex-col">
-          <div className="flex justify-between items-start mb-4">
-            <div className="space-y-1 flex-1 mr-2">
-              <Badge variant="outline" className={cn(
-                "rounded-md border-0 px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase",
-                adv.category === '玄幻' ? "bg-amber-50 text-amber-700" :
-                adv.category === '科幻' ? "bg-blue-50 text-blue-700" :
-                "bg-gray-100 text-gray-600"
-              )}>
-                {adv.category}
-              </Badge>
-              <h3 className="font-bold text-lg text-gray-900 line-clamp-1 group-hover:text-purple-700 transition-colors">
-                {adv.title}
-              </h3>
-            </div>
-            <div className="flex items-center gap-2">
-              {adv.is_finished ? (
-                adv.final_ending === "happy" ? (
-                  <Badge className="bg-blue-500 text-white hover:bg-blue-600 text-[10px] px-2 py-0.5 shrink-0">
-                    圆满结局
-                  </Badge>
-                ) : adv.final_ending === "tragic" ? (
-                  <Badge variant="destructive" className="text-[10px] px-2 py-0.5 shrink-0">
-                    悲剧结局
-                  </Badge>
-                ) : adv.final_ending === "game_over" ? (
-                  <Badge variant="destructive" className="text-[10px] px-2 py-0.5 shrink-0">
-                    Game Over
-                  </Badge>
-                ) : (
-                  <Badge variant="outline" className="text-[10px] px-2 py-0.5 shrink-0">
-                    已完结
-                  </Badge>
-                )
-              ) : (
-                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-[10px] px-2 py-0.5 shrink-0">
-                  进行中
+      <Card variant="sticky-pink" rotationId={String(adv.id)} className="h-full flex flex-col">
+        <div className="flex justify-between items-start mb-4">
+          <div className="space-y-1 flex-1 mr-2">
+            <Badge variant="sticky-yellow" className="text-[10px] uppercase tracking-wider">
+              {adv.category}
+            </Badge>
+            <h3 className="font-caveat font-bold text-xl text-sketch-text-primary line-clamp-1">
+              {adv.title}
+            </h3>
+          </div>
+          <div className="flex items-center gap-2">
+            {adv.is_finished ? (
+              adv.final_ending === "happy" ? (
+                <Badge variant="sticky-blue" className="text-[10px] shrink-0">
+                  圆满结局
                 </Badge>
-              )}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-gray-400 hover:text-red-500 hover:bg-red-50 shrink-0"
-                onClick={(e) => handleDelete(e, adv.id, adv.title)}
-                disabled={isDeleting === adv.id}
-              >
-                <Trash2 className="w-4 h-4" />
-              </Button>
-            </div>
+              ) : adv.final_ending === "tragic" ? (
+                <Badge variant="sticky-pink" className="text-[10px] shrink-0">
+                  悲剧结局
+                </Badge>
+              ) : adv.final_ending === "game_over" ? (
+                <Badge variant="sticky-pink" className="text-[10px] shrink-0">
+                  Game Over
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="font-patrick text-[10px] shrink-0">
+                  已完结
+                </Badge>
+              )
+            ) : (
+              <Badge variant="sticky-green" className="text-[10px] shrink-0">
+                进行中
+              </Badge>
+            )}
+            <Button
+              variant="sketch-ghost"
+              size="icon"
+              className="h-8 w-8 text-sketch-text-muted hover:text-red-500 hover:bg-sticky-pink-light shrink-0"
+              onClick={(e) => handleDelete(e, adv.id, adv.title)}
+              disabled={isDeleting === adv.id}
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
           </div>
+        </div>
 
-          <div className="grid grid-cols-2 gap-3 mb-6">
-            <div className="p-3 rounded-xl bg-gray-50 border border-gray-100 flex flex-col gap-1">
-              <span className="text-[10px] text-gray-400 uppercase font-bold flex items-center gap-1">
-                <Sword className="w-3 h-3" /> 主角
-              </span>
-              <span className="text-sm font-semibold text-gray-700 truncate">
-                {adv.protagonist_name}
-              </span>
-            </div>
-            <div className="p-3 rounded-xl bg-gray-50 border border-gray-100 flex flex-col gap-1">
-              <span className="text-[10px] text-gray-400 uppercase font-bold flex items-center gap-1">
-                <MapPin className="w-3 h-3" /> 进度
-              </span>
-              <span className="text-sm font-semibold text-gray-700">
-                第 {adv.total_nodes} 章
-              </span>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap gap-1.5 mb-6">
-            {adv.keywords.slice(0, 3).map(k => (
-              <span key={k} className="px-2 py-0.5 bg-white border border-gray-200 text-gray-500 rounded text-[10px]">
-                {k}
-              </span>
-            ))}
-          </div>
-
-          <div className="mt-auto pt-4 border-t border-gray-100 flex items-center justify-between">
-            <span className="text-xs text-gray-400 flex items-center gap-1">
-              <Clock className="w-3 h-3" />
-              {new Date(adv.updated_at).toLocaleDateString()}
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <div className="p-3 rounded-lg bg-white/50 border-2 border-dashed border-sketch-text-secondary/20 flex flex-col gap-1">
+            <span className="text-[10px] text-sketch-text-muted uppercase font-patrick flex items-center gap-1">
+              <Sword className="w-3 h-3" /> 主角
             </span>
+            <span className="text-sm font-patrick font-semibold text-sketch-text-primary truncate">
+              {adv.protagonist_name}
+            </span>
+          </div>
+          <div className="p-3 rounded-lg bg-white/50 border-2 border-dashed border-sketch-text-secondary/20 flex flex-col gap-1">
+            <span className="text-[10px] text-sketch-text-muted uppercase font-patrick flex items-center gap-1">
+              <MapPin className="w-3 h-3" /> 进度
+            </span>
+            <span className="text-sm font-patrick font-semibold text-sketch-text-primary">
+              第 {adv.total_nodes} 章
+            </span>
+          </div>
+        </div>
 
-            <div className="flex items-center gap-2">
-              <Link href={`/adventures/${adv.id}/tree`}>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-purple-600 hover:bg-purple-50">
-                  <GitFork className="w-4 h-4" />
+        <div className="flex flex-wrap gap-1.5 mb-4">
+          {adv.keywords.slice(0, 3).map(k => (
+            <span key={k} className="px-2 py-0.5 bg-white/70 border border-dashed border-sketch-text-secondary/30 text-sketch-text-secondary rounded font-patrick text-[10px]">
+              {k}
+            </span>
+          ))}
+        </div>
+
+        <div className="mt-auto pt-4 border-t-2 border-dashed border-sketch-text-secondary/20 flex items-center justify-between">
+          <span className="text-xs text-sketch-text-muted font-patrick flex items-center gap-1">
+            <Clock className="w-3 h-3" />
+            {new Date(adv.updated_at).toLocaleDateString()}
+          </span>
+
+          <div className="flex items-center gap-2">
+            <Link href={`/adventures/${adv.id}/tree`}>
+              <Button variant="sketch-ghost" size="icon" className="h-8 w-8 text-sketch-text-muted hover:text-sketch-text-primary">
+                <GitFork className="w-4 h-4" />
+              </Button>
+            </Link>
+            {adv.is_finished ? (
+              <Link href={`/adventures/${adv.id}/novel`}>
+                <Button variant="sketch-secondary" size="sm">
+                  <ScrollText className="w-3.5 h-3.5 mr-2" />
+                  阅读小说
                 </Button>
               </Link>
-              {adv.is_finished ? (
-                <Link href={`/adventures/${adv.id}/novel`}>
-                  <Button variant="outline" size="sm" className="group/btn">
-                    <ScrollText className="w-3.5 h-3.5 mr-2 text-gray-500 group-hover/btn:text-gray-900" />
-                    阅读小说
-                  </Button>
-                </Link>
-              ) : (
-                <Link href={`/adventures/${adv.id}/play`}>
-                  <Button size="sm" className="bg-gray-900 hover:bg-black text-white group/btn">
-                    继续冒险
-                    <ChevronRight className="w-3.5 h-3.5 ml-1 group-hover/btn:translate-x-0.5 transition-transform" />
-                  </Button>
-                </Link>
-              )}
-            </div>
+            ) : (
+              <Link href={`/adventures/${adv.id}/play`}>
+                <Button variant="sketch" size="sm">
+                  继续冒险
+                  <ChevronRight className="w-3.5 h-3.5 ml-1" />
+                </Button>
+              </Link>
+            )}
           </div>
         </div>
       </Card>
     </motion.div>
   );
 
-  // 社区冒险卡片
+  // Community adventure card with sticky-pink sketch style
   const CommunityAdventureCard = ({ adv }: { adv: Adventure }) => (
     <motion.div
       key={adv.id}
@@ -395,170 +373,155 @@ export default function AdventuresPage() {
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
     >
-      <Card className="group relative overflow-hidden border-gray-200 hover:border-blue-200 hover:shadow-xl hover:shadow-blue-500/5 transition-all duration-300 h-full flex flex-col">
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-400 to-cyan-400" />
-
-        <div className="p-6 flex-1 flex flex-col">
-          <div className="flex justify-between items-start mb-4">
-            <div className="space-y-1 flex-1 mr-2">
-              <Badge variant="outline" className={cn(
-                "rounded-md border-0 px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase",
-                adv.category === '玄幻' ? "bg-amber-50 text-amber-700" :
-                adv.category === '科幻' ? "bg-blue-50 text-blue-700" :
-                "bg-gray-100 text-gray-600"
-              )}>
-                {adv.category}
-              </Badge>
-              <h3 className="font-bold text-lg text-gray-900 line-clamp-1 group-hover:text-blue-700 transition-colors">
-                {adv.title}
-              </h3>
-            </div>
-            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-[10px] px-2 py-0.5 shrink-0">
-              <User className="w-3 h-3 mr-1" />
-              社区
+      <Card variant="sticky-pink" rotationId={`community-${adv.id}`} className="h-full flex flex-col">
+        <div className="flex justify-between items-start mb-4">
+          <div className="space-y-1 flex-1 mr-2">
+            <Badge variant="sticky-yellow" className="text-[10px] uppercase tracking-wider">
+              {adv.category}
             </Badge>
+            <h3 className="font-caveat font-bold text-xl text-sketch-text-primary line-clamp-1">
+              {adv.title}
+            </h3>
           </div>
+          <Badge variant="sticky-blue" className="text-[10px] shrink-0">
+            <User className="w-3 h-3 mr-1" />
+            社区
+          </Badge>
+        </div>
 
-          <div className="grid grid-cols-2 gap-3 mb-6">
-            <div className="p-3 rounded-xl bg-gray-50 border border-gray-100 flex flex-col gap-1">
-              <span className="text-[10px] text-gray-400 uppercase font-bold flex items-center gap-1">
-                <Sword className="w-3 h-3" /> 主角
-              </span>
-              <span className="text-sm font-semibold text-gray-700 truncate">
-                {adv.protagonist_name}
-              </span>
-            </div>
-            <div className="p-3 rounded-xl bg-gray-50 border border-gray-100 flex flex-col gap-1">
-              <span className="text-[10px] text-gray-400 uppercase font-bold flex items-center gap-1">
-                <BookOpen className="w-3 h-3" /> 章节
-              </span>
-              <span className="text-sm font-semibold text-gray-700">
-                {adv.total_nodes} 章
-              </span>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap gap-1.5 mb-6">
-            {adv.keywords.slice(0, 3).map(k => (
-              <span key={k} className="px-2 py-0.5 bg-white border border-gray-200 text-gray-500 rounded text-[10px]">
-                #{k}
-              </span>
-            ))}
-          </div>
-
-          <div className="mt-auto pt-4 border-t border-gray-100 flex items-center justify-between">
-            <span className="text-xs text-gray-400 flex items-center gap-1">
-              <Clock className="w-3 h-3" />
-              {new Date(adv.created_at).toLocaleDateString()}
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <div className="p-3 rounded-lg bg-white/50 border-2 border-dashed border-sketch-text-secondary/20 flex flex-col gap-1">
+            <span className="text-[10px] text-sketch-text-muted uppercase font-patrick flex items-center gap-1">
+              <Sword className="w-3 h-3" /> 主角
             </span>
-
-            <Button
-              size="sm"
-              className="bg-blue-600 hover:bg-blue-700 text-white group/btn"
-              onClick={() => handleFork(adv.id)}
-              disabled={isForking === adv.id}
-            >
-              <GitFork className="w-3.5 h-3.5 mr-2" />
-              {isForking === adv.id ? "分叉中..." : "分叉探索"}
-            </Button>
+            <span className="text-sm font-patrick font-semibold text-sketch-text-primary truncate">
+              {adv.protagonist_name}
+            </span>
           </div>
+          <div className="p-3 rounded-lg bg-white/50 border-2 border-dashed border-sketch-text-secondary/20 flex flex-col gap-1">
+            <span className="text-[10px] text-sketch-text-muted uppercase font-patrick flex items-center gap-1">
+              <BookOpen className="w-3 h-3" /> 章节
+            </span>
+            <span className="text-sm font-patrick font-semibold text-sketch-text-primary">
+              {adv.total_nodes} 章
+            </span>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-1.5 mb-4">
+          {adv.keywords.slice(0, 3).map(k => (
+            <span key={k} className="px-2 py-0.5 bg-white/70 border border-dashed border-sketch-text-secondary/30 text-sketch-text-secondary rounded font-patrick text-[10px]">
+              #{k}
+            </span>
+          ))}
+        </div>
+
+        <div className="mt-auto pt-4 border-t-2 border-dashed border-sketch-text-secondary/20 flex items-center justify-between">
+          <span className="text-xs text-sketch-text-muted font-patrick flex items-center gap-1">
+            <Clock className="w-3 h-3" />
+            {new Date(adv.created_at).toLocaleDateString()}
+          </span>
+
+          <Button
+            variant="sketch"
+            size="sm"
+            onClick={() => handleFork(adv.id)}
+            disabled={isForking === adv.id}
+          >
+            <GitFork className="w-3.5 h-3.5 mr-2" />
+            {isForking === adv.id ? "分叉中..." : "分叉探索"}
+          </Button>
         </div>
       </Card>
     </motion.div>
   );
 
   return (
-    <div className="min-h-screen bg-ios-bg">
-      {/* Header */}
-      <header className="sticky top-0 z-50 w-full h-auto min-h-[5rem] flex flex-col justify-center">
-        {/* 毛玻璃背景层 */}
-        <div className="absolute inset-0 bg-white/70 backdrop-blur-[20px] border-b border-white/40 shadow-[0_4px_30px_rgba(0,0,0,0.03)] supports-[backdrop-filter]:bg-white/50" />
-
-        <div className="container relative py-4 space-y-4">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <Link href="/" className="group">
-                <Button variant="ghost" size="icon" className="shrink-0 hover:bg-white/60 rounded-full mr-2 transition-colors">
-                  <Home className="w-5 h-5 text-gray-600 group-hover:text-purple-600" />
-                </Button>
-              </Link>
-              <div className={cn(
-                "w-10 h-10 rounded-xl flex items-center justify-center shadow-sm transition-colors",
-                mainTab === 'mine' ? "bg-purple-100 text-purple-600" : "bg-blue-100 text-blue-600"
-              )}>
-                {mainTab === 'mine' ? <Gamepad2 className="w-6 h-6" /> : <Compass className="w-6 h-6" />}
+    <div className="min-h-screen grid-paper-bg">
+      {/* Header - Sketch style */}
+      <header className="sticky top-0 z-50 w-full">
+        <div className="bg-white/95 border-b-2 border-dashed border-sketch-text-secondary/30">
+          <div className="container py-4 space-y-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <Link href="/" className="group">
+                  <Button variant="sketch-ghost" size="icon" className="shrink-0 mr-2">
+                    <Home className="w-5 h-5" />
+                  </Button>
+                </Link>
+                <div className={cn(
+                  "w-10 h-10 rounded-xl flex items-center justify-center border-2 border-dashed transition-colors",
+                  mainTab === 'mine' ? "bg-sticky-pink-light border-sketch-text-secondary/30" : "bg-sticky-blue-light border-sketch-text-secondary/30"
+                )}>
+                  {mainTab === 'mine' ? <Gamepad2 className="w-6 h-6 text-sketch-text-primary" /> : <Compass className="w-6 h-6 text-sketch-text-primary" />}
+                </div>
+                <div>
+                  <h1 className="text-2xl font-caveat font-bold text-sketch-text-primary">
+                    {mainTab === 'mine' ? '我的冒险' : '探索社区'}
+                  </h1>
+                  <p className="text-xs text-sketch-text-secondary font-patrick">
+                    {mainTab === 'mine' ? '记录你的每一次传奇旅程' : '发现精彩的社区故事'}
+                  </p>
+                </div>
               </div>
-              <div>
-                <h1 className="text-xl font-bold text-gray-900 tracking-tight">
-                  {mainTab === 'mine' ? '我的冒险' : '探索社区'}
-                </h1>
-                <p className="text-xs text-gray-500 font-medium">
-                  {mainTab === 'mine' ? '记录你的每一次传奇旅程' : '发现精彩的社区故事'}
-                </p>
+
+              <div className="flex items-center gap-3 w-full md:w-auto">
+                <div className="relative flex-1 md:w-64 group">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-sketch-text-muted" />
+                  <Input
+                    variant="sketch"
+                    placeholder="搜索标题或关键词..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9 h-10"
+                  />
+                </div>
+                <Link href="/adventures/new">
+                  <Button variant="sketch">
+                    <Plus className="w-4 h-4 mr-2" /> 新冒险
+                  </Button>
+                </Link>
               </div>
             </div>
 
-            <div className="flex items-center gap-3 w-full md:w-auto">
-              <div className="relative flex-1 md:w-64 group">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-purple-500 transition-colors" />
-                <Input
-                  placeholder="搜索标题或关键词..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 bg-white/50 border-white/60 focus:bg-white focus:border-purple-200 focus:ring-2 focus:ring-purple-100 transition-all h-10 rounded-full shadow-inner"
-                />
-              </div>
-              <Link href="/adventures/new">
-                <Button className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-lg shadow-purple-500/20 rounded-full px-6 transition-all hover:scale-105">
-                  <Plus className="w-4 h-4 mr-2" /> 新冒险
-                </Button>
-              </Link>
-            </div>
-          </div>
-
-          {/* 主Tab：我的冒险 / 探索社区 */}
-          <div>
-            <Tabs value={mainTab} onValueChange={handleMainTabChange} className="w-full">
-              <TabsList className="bg-gray-100/50 p-1 rounded-full border border-white/50">
-                <TabsTrigger
-                  value="mine"
-                  className="px-6 rounded-full data-[state=active]:bg-white data-[state=active]:text-purple-700 data-[state=active]:shadow-sm transition-all"
-                >
-                  <Gamepad2 className="w-4 h-4 mr-2" />
-                  我的冒险 ({myAdventures.length})
-                </TabsTrigger>
-                <TabsTrigger
-                  value="explore"
-                  className="px-6 rounded-full data-[state=active]:bg-white data-[state=active]:text-blue-700 data-[state=active]:shadow-sm transition-all"
-                >
-                  <Compass className="w-4 h-4 mr-2" />
-                  探索社区 {communityAdventures.length > 0 && `(${communityAdventures.length})`}
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </div>
-
-          {/* 子Tab：进行中 / 已完结（仅在我的冒险中显示）*/}
-          {mainTab === 'mine' && (
-            <div className="pt-2">
-              <Tabs value={subTab} onValueChange={(v) => setSubTab(v as "ongoing" | "finished")} className="w-full">
-                <TabsList className="bg-transparent p-0 h-auto border-b border-gray-200/50 rounded-none w-full justify-start">
-                  <TabsTrigger
-                    value="ongoing"
-                    className="px-4 py-2 rounded-none border-b-2 border-transparent data-[state=active]:border-purple-600 data-[state=active]:bg-transparent data-[state=active]:text-purple-700 data-[state=active]:shadow-none transition-all"
-                  >
-                    进行中 ({myAdventures.filter(a => !a.is_finished).length})
+            {/* Main Tab: mine / explore */}
+            <div>
+              <Tabs value={mainTab} onValueChange={handleMainTabChange} className="w-full">
+                <TabsList variant="sketch">
+                  <TabsTrigger variant="sketch" value="mine">
+                    <Gamepad2 className="w-4 h-4 mr-2" />
+                    我的冒险 ({myAdventures.length})
                   </TabsTrigger>
-                  <TabsTrigger
-                    value="finished"
-                    className="px-4 py-2 rounded-none border-b-2 border-transparent data-[state=active]:border-purple-600 data-[state=active]:bg-transparent data-[state=active]:text-purple-700 data-[state=active]:shadow-none transition-all"
-                  >
-                    已完结 ({myAdventures.filter(a => a.is_finished).length})
+                  <TabsTrigger variant="sketch" value="explore">
+                    <Compass className="w-4 h-4 mr-2" />
+                    探索社区 {communityAdventures.length > 0 && `(${communityAdventures.length})`}
                   </TabsTrigger>
                 </TabsList>
               </Tabs>
             </div>
-          )}
+
+            {/* Sub Tab: ongoing / finished (only shown in "mine" tab) */}
+            {mainTab === 'mine' && (
+              <div className="pt-2">
+                <Tabs value={subTab} onValueChange={(v) => setSubTab(v as "ongoing" | "finished")} className="w-full">
+                  <TabsList className="bg-transparent p-0 h-auto border-b-2 border-dashed border-sketch-text-secondary/20 rounded-none w-full justify-start">
+                    <TabsTrigger
+                      value="ongoing"
+                      className="px-4 py-2 rounded-none border-b-2 border-transparent font-patrick text-sketch-text-secondary data-[state=active]:border-sketch-text-primary data-[state=active]:bg-transparent data-[state=active]:text-sketch-text-primary data-[state=active]:shadow-none transition-all"
+                    >
+                      进行中 ({myAdventures.filter(a => !a.is_finished).length})
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="finished"
+                      className="px-4 py-2 rounded-none border-b-2 border-transparent font-patrick text-sketch-text-secondary data-[state=active]:border-sketch-text-primary data-[state=active]:bg-transparent data-[state=active]:text-sketch-text-primary data-[state=active]:shadow-none transition-all"
+                    >
+                      已完结 ({myAdventures.filter(a => a.is_finished).length})
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 

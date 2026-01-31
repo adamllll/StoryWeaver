@@ -100,11 +100,11 @@ export default function AdventureNovelReaderPage() {
     return (
       <div className={cn(
         "min-h-screen flex items-center justify-center transition-colors duration-500",
-        settings.isDark ? "bg-gray-900" : "bg-ios-reading"
+        settings.isDark ? "bg-gray-900" : "grid-paper-bg"
       )}>
         <div className="flex flex-col items-center gap-4">
-          <Loader2 className={cn("w-8 h-8 animate-spin", settings.isDark ? "text-purple-400" : "text-purple-600")} />
-          <span className={cn("text-sm font-medium", settings.isDark ? "text-gray-400" : "text-gray-500")}>正在装订书籍...</span>
+          <Loader2 className={cn("w-8 h-8 animate-spin", settings.isDark ? "text-sticky-yellow" : "text-sketch-text-primary")} />
+          <span className={cn("text-sm font-patrick", settings.isDark ? "text-gray-400" : "text-sketch-text-secondary")}>正在装订书籍...</span>
         </div>
       </div>
     );
@@ -115,34 +115,34 @@ export default function AdventureNovelReaderPage() {
   return (
     <div
       className={cn(
-        "min-h-screen transition-colors duration-500 selection:bg-purple-300/50",
-        settings.isDark ? "bg-[#1a1a1c] text-gray-200" : "bg-[#F9F9F6] text-gray-800"
+        "min-h-screen transition-colors duration-500 selection:bg-sticky-yellow/50",
+        settings.isDark ? "bg-[#1a1a1c] text-gray-200" : "grid-paper-bg text-sketch-text-primary"
       )}
     >
-      {/* 顶部导航栏 (自动隐藏) */}
+      {/* Header - Sketch style with auto-hide */}
       <motion.header
         initial={{ y: 0 }}
         animate={{ y: isHeaderVisible ? 0 : -80 }}
         transition={{ duration: 0.3, ease: "easeInOut" }}
         className={cn(
-          "fixed top-0 left-0 right-0 z-40 h-16 flex items-center justify-between px-4 md:px-8 border-b backdrop-blur-xl transition-colors duration-500",
+          "fixed top-0 left-0 right-0 z-40 h-16 flex items-center justify-between px-4 md:px-8 border-b-2 border-dashed transition-colors duration-500",
           settings.isDark
-            ? "bg-gray-900/80 border-white/5"
-            : "bg-white/80 border-gray-200/50"
+            ? "bg-gray-900/95 border-white/10"
+            : "bg-white/95 border-sketch-text-secondary/30"
         )}
       >
         <div className="flex items-center gap-4 overflow-hidden">
           <button
             onClick={() => router.push("/adventures")}
             className={cn(
-              "p-2 rounded-full transition-colors flex-shrink-0",
-              settings.isDark ? "hover:bg-white/10 text-gray-400" : "hover:bg-black/5 text-gray-600"
+              "p-2 rounded-xl transition-colors flex-shrink-0 border-2 border-dashed",
+              settings.isDark ? "border-white/20 hover:bg-white/10 text-gray-400" : "border-sketch-text-secondary/30 hover:bg-sticky-yellow-light text-sketch-text-secondary"
             )}
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <div className="w-px h-4 bg-gray-500/20" />
-          <h1 className="text-sm font-bold truncate max-w-[200px] md:max-w-md opacity-90">
+          <div className="w-px h-4 bg-current opacity-20" />
+          <h1 className={cn("text-lg font-caveat font-bold truncate max-w-[200px] md:max-w-md", settings.isDark ? "text-gray-100" : "text-sketch-text-primary")}>
             {adventure.title}
           </h1>
         </div>
@@ -151,8 +151,8 @@ export default function AdventureNovelReaderPage() {
           <button
             onClick={() => router.push(`/adventures/${adventureId}/tree`)}
             className={cn(
-              "p-2 rounded-full transition-colors",
-              settings.isDark ? "hover:bg-white/10 text-gray-400" : "hover:bg-black/5 text-gray-600"
+              "p-2 rounded-xl transition-colors border-2 border-dashed",
+              settings.isDark ? "border-white/20 hover:bg-white/10 text-gray-400" : "border-sketch-text-secondary/30 hover:bg-sticky-pink-light text-sketch-text-secondary"
             )}
           >
             <GitFork className="w-5 h-5" />
@@ -160,8 +160,8 @@ export default function AdventureNovelReaderPage() {
           <button
             onClick={() => setShowToc(!showToc)}
             className={cn(
-              "p-2 rounded-full transition-colors",
-              settings.isDark ? "hover:bg-white/10 text-gray-400" : "hover:bg-black/5 text-gray-600"
+              "p-2 rounded-xl transition-colors border-2 border-dashed",
+              settings.isDark ? "border-white/20 hover:bg-white/10 text-gray-400" : "border-sketch-text-secondary/30 hover:bg-sticky-blue-light text-sketch-text-secondary"
             )}
           >
             <List className="w-5 h-5" />
@@ -169,9 +169,10 @@ export default function AdventureNovelReaderPage() {
           <button
             onClick={() => setShowSettings(!showSettings)}
             className={cn(
-              "p-2 rounded-full transition-colors",
-              settings.isDark ? "hover:bg-white/10 text-gray-400" : "hover:bg-black/5 text-gray-600",
-              showSettings && (settings.isDark ? "bg-white/10 text-white" : "bg-black/5 text-black")
+              "p-2 rounded-xl transition-colors border-2",
+              showSettings
+                ? (settings.isDark ? "bg-white/10 text-white border-white/30" : "bg-sticky-yellow border-sketch-text-primary/30 text-sketch-text-primary")
+                : (settings.isDark ? "border-dashed border-white/20 hover:bg-white/10 text-gray-400" : "border-dashed border-sketch-text-secondary/30 hover:bg-sticky-green-light text-sketch-text-secondary")
             )}
           >
             <Settings className="w-5 h-5" />
@@ -179,7 +180,7 @@ export default function AdventureNovelReaderPage() {
         </div>
       </motion.header>
 
-      {/* 章节目录 */}
+      {/* Table of contents - Sketch style */}
       <AnimatePresence>
         {showToc && (
           <>
@@ -187,7 +188,7 @@ export default function AdventureNovelReaderPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm"
+              className="fixed inset-0 z-40 bg-sketch-text-primary/20"
               onClick={() => setShowToc(false)}
             />
             <motion.aside
@@ -195,11 +196,11 @@ export default function AdventureNovelReaderPage() {
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: -280, opacity: 0 }}
               className={cn(
-                "fixed top-0 left-0 z-50 h-full w-72 p-6 border-r backdrop-blur-xl",
-                settings.isDark ? "bg-gray-900/90 border-white/10" : "bg-white/90 border-gray-200"
+                "fixed top-0 left-0 z-50 h-full w-72 p-6 border-r-2 border-dashed",
+                settings.isDark ? "bg-gray-900/95 border-white/10" : "bg-white/95 border-sketch-text-secondary/30"
               )}
             >
-              <h2 className={cn("text-sm font-bold mb-4", settings.isDark ? "text-gray-100" : "text-gray-900")}>章节目录</h2>
+              <h2 className={cn("text-lg font-caveat font-bold mb-4", settings.isDark ? "text-gray-100" : "text-sketch-text-primary")}>章节目录</h2>
               <div className="space-y-2 overflow-y-auto max-h-[calc(100%-3rem)] pr-1">
                 {nodes.map((node, index) => (
                   <button
@@ -209,10 +210,10 @@ export default function AdventureNovelReaderPage() {
                       setShowToc(false);
                     }}
                     className={cn(
-                      "w-full text-left px-3 py-2 rounded-lg text-sm transition-colors",
+                      "w-full text-left px-3 py-2 rounded-lg text-sm font-patrick transition-colors border-2",
                       index === currentIndex
-                        ? (settings.isDark ? "bg-white/10 text-white" : "bg-black/5 text-gray-900")
-                        : (settings.isDark ? "text-gray-400 hover:bg-white/10" : "text-gray-600 hover:bg-black/5")
+                        ? (settings.isDark ? "bg-white/10 text-white border-white/20" : "bg-sticky-yellow border-sketch-text-primary/20 text-sketch-text-primary")
+                        : (settings.isDark ? "text-gray-400 hover:bg-white/10 border-transparent" : "text-sketch-text-secondary hover:bg-sticky-yellow-light border-transparent")
                     )}
                   >
                     <span className="text-xs opacity-60 mr-2">{index + 1}.</span>
@@ -225,7 +226,7 @@ export default function AdventureNovelReaderPage() {
         )}
       </AnimatePresence>
 
-      {/* 设置面板 */}
+      {/* Settings panel - Sketch style */}
       <AnimatePresence>
         {showSettings && (
           <>
@@ -235,48 +236,48 @@ export default function AdventureNovelReaderPage() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: -10 }}
               className={cn(
-                "fixed top-20 right-4 md:right-8 z-50 w-80 rounded-ios-2xl p-6 shadow-2xl border backdrop-blur-3xl",
+                "fixed top-20 right-4 md:right-8 z-50 w-80 rounded-xl p-6 shadow-sketch border-2",
                 settings.isDark
-                  ? "bg-gray-800/90 border-gray-700 text-gray-100"
-                  : "bg-white/90 border-white/60 text-gray-900"
+                  ? "bg-gray-800/95 border-gray-700 text-gray-100"
+                  : "bg-white border-sketch-text-primary/20 text-sketch-text-primary"
               )}
             >
-              <h3 className="text-xs font-bold uppercase tracking-wider opacity-50 mb-4">阅读偏好</h3>
+              <h3 className="text-sm font-caveat font-bold uppercase tracking-wider opacity-70 mb-4">阅读偏好</h3>
 
-              {/* 字体大小 */}
+              {/* Font size */}
               <div className="mb-6">
-                <div className="flex justify-between text-sm mb-2 opacity-80">
+                <div className="flex justify-between text-sm mb-2 opacity-80 font-patrick">
                   <span>小</span>
                   <span>字号</span>
                   <span>大</span>
                 </div>
-                <div className={cn("flex items-center p-1 rounded-full", settings.isDark ? "bg-black/20" : "bg-gray-100")}>
+                <div className={cn("flex items-center p-1 rounded-xl border-2 border-dashed", settings.isDark ? "bg-black/20 border-white/10" : "bg-sticky-yellow-light/50 border-sketch-text-secondary/20")}>
                   <button onClick={() => setSettings(s => ({...s, fontSize: Math.max(14, s.fontSize - 1)}))} className="p-2 flex-1 flex justify-center"><Type className="w-3 h-3" /></button>
-                  <div className="w-px h-4 bg-current opacity-10" />
+                  <div className="w-px h-4 bg-current opacity-20" />
                   <button onClick={() => setSettings(s => ({...s, fontSize: Math.min(24, s.fontSize + 1)}))} className="p-2 flex-1 flex justify-center"><Type className="w-5 h-5" /></button>
                 </div>
               </div>
 
-              {/* 背景模式 */}
+              {/* Background mode */}
               <div className="grid grid-cols-2 gap-3 mb-6">
                 <button
                   onClick={() => setSettings(s => ({...s, isDark: false}))}
                   className={cn(
-                    "flex items-center justify-center gap-2 py-3 rounded-xl border transition-all",
+                    "flex items-center justify-center gap-2 py-3 rounded-xl border-2 transition-all font-patrick",
                     !settings.isDark
-                      ? "bg-[#F9F9F6] border-purple-400 ring-1 ring-purple-400 text-gray-900"
+                      ? "bg-sticky-yellow border-sketch-text-primary text-sketch-text-primary"
                       : "bg-gray-700 border-transparent hover:bg-gray-600"
                   )}
                 >
                   <Sun className="w-4 h-4" />
-                  <span>护眼</span>
+                  <span>手绘纸</span>
                 </button>
                 <button
                   onClick={() => setSettings(s => ({...s, isDark: true}))}
                   className={cn(
-                    "flex items-center justify-center gap-2 py-3 rounded-xl border transition-all",
+                    "flex items-center justify-center gap-2 py-3 rounded-xl border-2 transition-all font-patrick",
                     settings.isDark
-                      ? "bg-[#1a1a1c] border-purple-400 ring-1 ring-purple-400 text-white"
+                      ? "bg-[#1a1a1c] border-sticky-yellow text-white"
                       : "bg-gray-100 border-transparent hover:bg-gray-200"
                   )}
                 >
@@ -285,14 +286,14 @@ export default function AdventureNovelReaderPage() {
                 </button>
               </div>
 
-              {/* 字体选择 */}
-              <div className="flex p-1 rounded-xl bg-gray-500/10">
+              {/* Font family */}
+              <div className={cn("flex p-1 rounded-xl border-2 border-dashed", settings.isDark ? "bg-black/20 border-white/10" : "bg-sticky-pink-light/30 border-sketch-text-secondary/20")}>
                 <button
                   onClick={() => setSettings(s => ({...s, fontFamily: "serif"}))}
                   className={cn(
                     "flex-1 py-2 text-sm font-serif rounded-lg transition-all",
                     settings.fontFamily === "serif"
-                      ? (settings.isDark ? "bg-gray-600 shadow-sm text-white" : "bg-white shadow-sm text-gray-900")
+                      ? (settings.isDark ? "bg-gray-600 shadow-sm text-white" : "bg-sticky-yellow shadow-sketch-sm text-sketch-text-primary")
                       : "opacity-60 hover:opacity-100"
                   )}
                 >
@@ -301,13 +302,13 @@ export default function AdventureNovelReaderPage() {
                 <button
                   onClick={() => setSettings(s => ({...s, fontFamily: "sans"}))}
                   className={cn(
-                    "flex-1 py-2 text-sm font-sans rounded-lg transition-all",
+                    "flex-1 py-2 text-sm font-patrick rounded-lg transition-all",
                     settings.fontFamily === "sans"
-                      ? (settings.isDark ? "bg-gray-600 shadow-sm text-white" : "bg-white shadow-sm text-gray-900")
+                      ? (settings.isDark ? "bg-gray-600 shadow-sm text-white" : "bg-sticky-yellow shadow-sketch-sm text-sketch-text-primary")
                       : "opacity-60 hover:opacity-100"
                   )}
                 >
-                  黑体
+                  手写体
                 </button>
               </div>
             </motion.div>
@@ -315,7 +316,7 @@ export default function AdventureNovelReaderPage() {
         )}
       </AnimatePresence>
 
-      {/* 主阅读区域 */}
+      {/* Main reading area */}
       <main className="max-w-3xl mx-auto px-6 py-32 md:py-40 relative z-10">
         <motion.article
           initial={{ opacity: 0, y: 20 }}
@@ -325,13 +326,13 @@ export default function AdventureNovelReaderPage() {
           style={{
             fontSize: `${settings.fontSize}px`,
             lineHeight: settings.lineHeight,
-            fontFamily: settings.fontFamily === "serif" ? '"Georgia", "Noto Serif SC", serif' : 'system-ui, sans-serif',
+            fontFamily: settings.fontFamily === "serif" ? '"Georgia", "Noto Serif SC", serif' : '"Patrick Hand", "KaiTi", "STKaiti", cursive',
           }}
         >
           <h1
             className={cn(
-              "text-3xl md:text-4xl font-bold mb-10 text-center tracking-wide",
-              settings.isDark ? "text-gray-100" : "text-gray-900"
+              "text-3xl md:text-4xl font-caveat font-bold mb-10 text-center tracking-wide",
+              settings.isDark ? "text-gray-100" : "text-sketch-text-primary"
             )}
           >
             {currentNode.title || `第 ${currentNode.chapter_num} 章`}
@@ -340,7 +341,7 @@ export default function AdventureNovelReaderPage() {
           <div
             className={cn(
               "leading-relaxed tracking-wide text-justify",
-              settings.isDark ? "prose-invert text-gray-300" : "text-gray-800"
+              settings.isDark ? "prose-invert text-gray-300" : "text-sketch-text-primary"
             )}
             dangerouslySetInnerHTML={{
               __html: markdownToHtml(currentNode.content),
@@ -348,8 +349,8 @@ export default function AdventureNovelReaderPage() {
           />
         </motion.article>
 
-        <div className="mt-20 pt-10 border-t border-gray-500/10 flex flex-col items-center">
-          <p className={cn("text-xs font-mono mb-8 opacity-40", settings.isDark ? "text-gray-500" : "text-gray-400")}>
+        <div className={cn("mt-20 pt-10 border-t-2 border-dashed flex flex-col items-center", settings.isDark ? "border-white/10" : "border-sketch-text-secondary/20")}>
+          <p className={cn("text-xs font-patrick mb-8 opacity-40", settings.isDark ? "text-gray-500" : "text-sketch-text-muted")}>
             —— End of Chapter ——
           </p>
           <div className="w-full flex items-center justify-between gap-4">
@@ -357,10 +358,10 @@ export default function AdventureNovelReaderPage() {
               onClick={goToPrevChapter}
               disabled={currentIndex === 0}
               className={cn(
-                "flex-1 py-4 rounded-ios-xl flex items-center justify-center gap-2 transition-all disabled:opacity-30 disabled:cursor-not-allowed",
+                "flex-1 py-4 rounded-xl flex items-center justify-center gap-2 transition-all font-patrick border-2 disabled:opacity-30 disabled:cursor-not-allowed",
                 settings.isDark
-                  ? "bg-white/5 hover:bg-white/10 text-gray-300"
-                  : "bg-black/5 hover:bg-black/10 text-gray-600"
+                  ? "bg-white/5 hover:bg-white/10 text-gray-300 border-white/10"
+                  : "bg-white hover:bg-sticky-yellow-light text-sketch-text-secondary border-dashed border-sketch-text-secondary/30"
               )}
             >
               <ChevronLeft className="w-4 h-4" />
@@ -370,10 +371,10 @@ export default function AdventureNovelReaderPage() {
               onClick={goToNextChapter}
               disabled={currentIndex >= nodes.length - 1}
               className={cn(
-                "flex-1 py-4 rounded-ios-xl flex items-center justify-center gap-2 transition-all disabled:opacity-30 disabled:cursor-not-allowed",
+                "flex-1 py-4 rounded-xl flex items-center justify-center gap-2 transition-all font-caveat text-lg font-bold border-2 disabled:opacity-30 disabled:cursor-not-allowed",
                 settings.isDark
-                  ? "bg-white/10 hover:bg-white/20 text-white"
-                  : "bg-black/80 hover:bg-black text-white shadow-lg"
+                  ? "bg-white/10 hover:bg-white/20 text-white border-white/20"
+                  : "bg-sticky-yellow hover:shadow-sketch text-sketch-text-primary border-sketch-text-primary/20"
               )}
             >
               下一章
@@ -382,7 +383,7 @@ export default function AdventureNovelReaderPage() {
           </div>
         </div>
 
-        <div className="py-12 text-center text-gray-400">
+        <div className={cn("py-12 text-center font-patrick", settings.isDark ? "text-gray-500" : "text-sketch-text-muted")}>
           {adventure.is_finished ? "全书完" : "未完待续..."}
         </div>
       </main>

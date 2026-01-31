@@ -1,10 +1,10 @@
 /**
- * 沉浸式阅读页面 - Zen-iOS Hybrid 重构版
- * 
+ * 沉浸式阅读页面 - Sketch 手绘风格版
+ *
  * 核心特性：
  * - 极致的无干扰阅读模式 (Zen Mode)
- * - 纸质书质感的排版引擎
- * - 电影级的分支选择交互
+ * - 手绘纸质感的排版引擎
+ * - 手绘风格的分支选择交互
  */
 
 "use client";
@@ -143,11 +143,11 @@ export default function ReadPage() {
     return (
       <div className={cn(
         "min-h-screen flex items-center justify-center transition-colors duration-500",
-        settings.isDark ? "bg-gray-900" : "bg-ios-reading"
+        settings.isDark ? "bg-gray-900" : "grid-paper-bg"
       )}>
         <div className="flex flex-col items-center gap-4">
-          <Loader2 className={cn("w-8 h-8 animate-spin", settings.isDark ? "text-purple-400" : "text-purple-600")} />
-          <span className={cn("text-sm font-medium", settings.isDark ? "text-gray-400" : "text-gray-500")}>正在加载章节...</span>
+          <Loader2 className={cn("w-8 h-8 animate-spin", settings.isDark ? "text-sticky-yellow" : "text-sketch-text-primary")} />
+          <span className={cn("text-sm font-patrick", settings.isDark ? "text-gray-400" : "text-sketch-text-secondary")}>正在加载章节...</span>
         </div>
       </div>
     );
@@ -158,34 +158,34 @@ export default function ReadPage() {
   return (
     <div
       className={cn(
-        "min-h-screen transition-colors duration-500 selection:bg-purple-300/50",
-        settings.isDark ? "bg-[#1a1a1c] text-gray-200" : "bg-[#F9F9F6] text-gray-800"
+        "min-h-screen transition-colors duration-500 selection:bg-sticky-yellow/50",
+        settings.isDark ? "bg-[#1a1a1c] text-gray-200" : "grid-paper-bg text-sketch-text-primary"
       )}
     >
-      {/* 顶部导航栏 (自动隐藏) */}
+      {/* 顶部导航栏 (自动隐藏) - Sketch style */}
       <motion.header
         initial={{ y: 0 }}
         animate={{ y: isHeaderVisible ? 0 : -80 }}
         transition={{ duration: 0.3, ease: "easeInOut" }}
         className={cn(
-          "fixed top-0 left-0 right-0 z-40 h-16 flex items-center justify-between px-4 md:px-8 border-b backdrop-blur-xl transition-colors duration-500",
-          settings.isDark 
-            ? "bg-gray-900/80 border-white/5" 
-            : "bg-white/80 border-gray-200/50"
+          "fixed top-0 left-0 right-0 z-40 h-16 flex items-center justify-between px-4 md:px-8 border-b-2 border-dashed transition-colors duration-500",
+          settings.isDark
+            ? "bg-gray-900/95 border-white/10"
+            : "bg-white/95 border-sketch-text-secondary/30"
         )}
       >
         <div className="flex items-center gap-4 overflow-hidden">
           <Link
             href={`/novels/${novelId}`}
             className={cn(
-              "p-2 rounded-full transition-colors flex-shrink-0",
-              settings.isDark ? "hover:bg-white/10 text-gray-400" : "hover:bg-black/5 text-gray-600"
+              "p-2 rounded-xl transition-colors flex-shrink-0 border-2 border-dashed",
+              settings.isDark ? "border-white/20 hover:bg-white/10 text-gray-400" : "border-sketch-text-secondary/30 hover:bg-sticky-yellow-light text-sketch-text-secondary"
             )}
           >
             <ArrowLeft className="w-5 h-5" />
           </Link>
-          <div className="w-px h-4 bg-gray-500/20" />
-          <h1 className="text-sm font-bold truncate max-w-[200px] md:max-w-md opacity-90">
+          <div className="w-px h-4 bg-current opacity-20" />
+          <h1 className={cn("text-lg font-caveat font-bold truncate max-w-[200px] md:max-w-md", settings.isDark ? "text-gray-100" : "text-sketch-text-primary")}>
             {chapter.title}
           </h1>
         </div>
@@ -194,8 +194,8 @@ export default function ReadPage() {
           <button
             onClick={() => setShowToc(!showToc)}
             className={cn(
-              "p-2 rounded-full transition-colors",
-              settings.isDark ? "hover:bg-white/10 text-gray-400" : "hover:bg-black/5 text-gray-600"
+              "p-2 rounded-xl transition-colors border-2 border-dashed",
+              settings.isDark ? "border-white/20 hover:bg-white/10 text-gray-400" : "border-sketch-text-secondary/30 hover:bg-sticky-blue-light text-sketch-text-secondary"
             )}
           >
             <List className="w-5 h-5" />
@@ -203,9 +203,10 @@ export default function ReadPage() {
           <button
             onClick={() => setShowSettings(!showSettings)}
             className={cn(
-              "p-2 rounded-full transition-colors",
-              settings.isDark ? "hover:bg-white/10 text-gray-400" : "hover:bg-black/5 text-gray-600",
-              showSettings && (settings.isDark ? "bg-white/10 text-white" : "bg-black/5 text-black")
+              "p-2 rounded-xl transition-colors border-2",
+              showSettings
+                ? (settings.isDark ? "bg-white/10 text-white border-white/30" : "bg-sticky-yellow border-sketch-text-primary/30 text-sketch-text-primary")
+                : (settings.isDark ? "border-dashed border-white/20 hover:bg-white/10 text-gray-400" : "border-dashed border-sketch-text-secondary/30 hover:bg-sticky-green-light text-sketch-text-secondary")
             )}
           >
             <Settings className="w-5 h-5" />
@@ -213,7 +214,7 @@ export default function ReadPage() {
         </div>
       </motion.header>
 
-      {/* 设置面板 Popover */}
+      {/* 设置面板 Popover - Sketch style */}
       <AnimatePresence>
         {showSettings && (
           <>
@@ -223,24 +224,24 @@ export default function ReadPage() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: -10 }}
               className={cn(
-                "fixed top-20 right-4 md:right-8 z-50 w-80 rounded-ios-2xl p-6 shadow-2xl border backdrop-blur-3xl",
-                settings.isDark 
-                  ? "bg-gray-800/90 border-gray-700 text-gray-100" 
-                  : "bg-white/90 border-white/60 text-gray-900"
+                "fixed top-20 right-4 md:right-8 z-50 w-80 rounded-xl p-6 shadow-sketch border-2",
+                settings.isDark
+                  ? "bg-gray-800/95 border-gray-700 text-gray-100"
+                  : "bg-white border-sketch-text-primary/20 text-sketch-text-primary"
               )}
             >
-              <h3 className="text-xs font-bold uppercase tracking-wider opacity-50 mb-4">阅读偏好</h3>
+              <h3 className="text-sm font-caveat font-bold uppercase tracking-wider opacity-70 mb-4">阅读偏好</h3>
 
               {/* 字体大小 */}
               <div className="mb-6">
-                <div className="flex justify-between text-sm mb-2 opacity-80">
+                <div className="flex justify-between text-sm mb-2 opacity-80 font-patrick">
                   <span>小</span>
                   <span>字号</span>
                   <span>大</span>
                 </div>
-                <div className={cn("flex items-center p-1 rounded-full", settings.isDark ? "bg-black/20" : "bg-gray-100")}>
+                <div className={cn("flex items-center p-1 rounded-xl border-2 border-dashed", settings.isDark ? "bg-black/20 border-white/10" : "bg-sticky-yellow-light/50 border-sketch-text-secondary/20")}>
                   <button onClick={() => setSettings(s => ({...s, fontSize: Math.max(14, s.fontSize - 1)}))} className="p-2 flex-1 flex justify-center"><Type className="w-3 h-3" /></button>
-                  <div className="w-px h-4 bg-current opacity-10" />
+                  <div className="w-px h-4 bg-current opacity-20" />
                   <button onClick={() => setSettings(s => ({...s, fontSize: Math.min(24, s.fontSize + 1)}))} className="p-2 flex-1 flex justify-center"><Type className="w-5 h-5" /></button>
                 </div>
               </div>
@@ -250,21 +251,21 @@ export default function ReadPage() {
                 <button
                   onClick={() => setSettings(s => ({...s, isDark: false}))}
                   className={cn(
-                    "flex items-center justify-center gap-2 py-3 rounded-xl border transition-all",
-                    !settings.isDark 
-                      ? "bg-[#F9F9F6] border-purple-400 ring-1 ring-purple-400 text-gray-900" 
+                    "flex items-center justify-center gap-2 py-3 rounded-xl border-2 transition-all font-patrick",
+                    !settings.isDark
+                      ? "bg-sticky-yellow border-sketch-text-primary text-sketch-text-primary"
                       : "bg-gray-700 border-transparent hover:bg-gray-600"
                   )}
                 >
                   <Sun className="w-4 h-4" />
-                  <span>护眼</span>
+                  <span>手绘纸</span>
                 </button>
                 <button
                   onClick={() => setSettings(s => ({...s, isDark: true}))}
                   className={cn(
-                    "flex items-center justify-center gap-2 py-3 rounded-xl border transition-all",
-                    settings.isDark 
-                      ? "bg-[#1a1a1c] border-purple-400 ring-1 ring-purple-400 text-white" 
+                    "flex items-center justify-center gap-2 py-3 rounded-xl border-2 transition-all font-patrick",
+                    settings.isDark
+                      ? "bg-[#1a1a1c] border-sticky-yellow text-white"
                       : "bg-gray-100 border-transparent hover:bg-gray-200"
                   )}
                 >
@@ -274,29 +275,29 @@ export default function ReadPage() {
               </div>
 
               {/* 字体选择 */}
-              <div className="flex p-1 rounded-xl bg-gray-500/10">
-                 <button 
-                    onClick={() => setSettings(s => ({...s, fontFamily: "serif"}))}
-                    className={cn(
-                      "flex-1 py-2 text-sm font-serif rounded-lg transition-all",
-                      settings.fontFamily === "serif" 
-                        ? (settings.isDark ? "bg-gray-600 shadow-sm text-white" : "bg-white shadow-sm text-gray-900") 
-                        : "opacity-60 hover:opacity-100"
-                    )}
-                  >
-                    宋体
-                 </button>
-                 <button 
-                    onClick={() => setSettings(s => ({...s, fontFamily: "sans"}))}
-                    className={cn(
-                      "flex-1 py-2 text-sm font-sans rounded-lg transition-all",
-                      settings.fontFamily === "sans" 
-                         ? (settings.isDark ? "bg-gray-600 shadow-sm text-white" : "bg-white shadow-sm text-gray-900") 
-                         : "opacity-60 hover:opacity-100"
-                    )}
-                  >
-                    黑体
-                 </button>
+              <div className={cn("flex p-1 rounded-xl border-2 border-dashed", settings.isDark ? "bg-black/20 border-white/10" : "bg-sticky-pink-light/30 border-sketch-text-secondary/20")}>
+                <button
+                  onClick={() => setSettings(s => ({...s, fontFamily: "serif"}))}
+                  className={cn(
+                    "flex-1 py-2 text-sm font-serif rounded-lg transition-all",
+                    settings.fontFamily === "serif"
+                      ? (settings.isDark ? "bg-gray-600 shadow-sm text-white" : "bg-sticky-yellow shadow-sketch-sm text-sketch-text-primary")
+                      : "opacity-60 hover:opacity-100"
+                  )}
+                >
+                  宋体
+                </button>
+                <button
+                  onClick={() => setSettings(s => ({...s, fontFamily: "sans"}))}
+                  className={cn(
+                    "flex-1 py-2 text-sm font-patrick rounded-lg transition-all",
+                    settings.fontFamily === "sans"
+                      ? (settings.isDark ? "bg-gray-600 shadow-sm text-white" : "bg-sticky-yellow shadow-sketch-sm text-sketch-text-primary")
+                      : "opacity-60 hover:opacity-100"
+                  )}
+                >
+                  手写体
+                </button>
               </div>
             </motion.div>
           </>
@@ -313,13 +314,13 @@ export default function ReadPage() {
           style={{
             fontSize: `${settings.fontSize}px`,
             lineHeight: settings.lineHeight,
-            fontFamily: settings.fontFamily === "serif" ? '"Georgia", "Noto Serif SC", serif' : 'system-ui, sans-serif',
+            fontFamily: settings.fontFamily === "serif" ? '"Georgia", "Noto Serif SC", serif' : '"Patrick Hand", "KaiTi", "STKaiti", cursive',
           }}
         >
           {/* 标题 */}
           <h1 className={cn(
-            "text-3xl md:text-4xl font-bold mb-16 text-center tracking-wide",
-            settings.isDark ? "text-gray-100" : "text-gray-900"
+            "text-3xl md:text-4xl font-caveat font-bold mb-16 text-center tracking-wide",
+            settings.isDark ? "text-gray-100" : "text-sketch-text-primary"
           )}>
             {chapter.title}
           </h1>
@@ -328,7 +329,7 @@ export default function ReadPage() {
           <div
             className={cn(
               "leading-relaxed tracking-wide text-justify",
-              settings.isDark ? "prose-invert text-gray-300" : "text-gray-800"
+              settings.isDark ? "prose-invert text-gray-300" : "text-sketch-text-primary"
             )}
             dangerouslySetInnerHTML={{
               __html: markdownToHtml(chapter.content),
@@ -336,9 +337,9 @@ export default function ReadPage() {
           />
         </motion.article>
 
-        {/* 底部互动区 */}
-        <div className="mt-24 pt-10 border-t border-gray-500/10 flex flex-col items-center">
-          <p className={cn("text-xs font-mono mb-8 opacity-40", settings.isDark ? "text-gray-500" : "text-gray-400")}>
+        {/* 底部互动区 - Sketch style */}
+        <div className={cn("mt-24 pt-10 border-t-2 border-dashed flex flex-col items-center", settings.isDark ? "border-white/10" : "border-sketch-text-secondary/20")}>
+          <p className={cn("text-xs font-patrick mb-8 opacity-40", settings.isDark ? "text-gray-500" : "text-sketch-text-muted")}>
              —— End of Chapter ——
           </p>
 
@@ -347,10 +348,10 @@ export default function ReadPage() {
                onClick={goToPrevChapter}
                disabled={!chapter.navigation.prev_chapter_id}
                className={cn(
-                 "flex-1 py-4 rounded-ios-xl flex items-center justify-center gap-2 transition-all disabled:opacity-30 disabled:cursor-not-allowed",
-                 settings.isDark 
-                   ? "bg-white/5 hover:bg-white/10 text-gray-300" 
-                   : "bg-black/5 hover:bg-black/10 text-gray-600"
+                 "flex-1 py-4 rounded-xl flex items-center justify-center gap-2 transition-all font-patrick border-2 disabled:opacity-30 disabled:cursor-not-allowed",
+                 settings.isDark
+                   ? "bg-white/5 hover:bg-white/10 text-gray-300 border-white/10"
+                   : "bg-white hover:bg-sticky-yellow-light text-sketch-text-secondary border-dashed border-sketch-text-secondary/30"
                )}
              >
                <ChevronLeft className="w-4 h-4" />
@@ -360,7 +361,7 @@ export default function ReadPage() {
              {chapter.choices && chapter.choices.length > 0 ? (
                <button
                  onClick={() => setShowChoices(true)}
-                 className="flex-[2] py-4 rounded-ios-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold shadow-lg shadow-purple-500/20 hover:shadow-purple-500/40 hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-2 animate-pulse-subtle"
+                 className="flex-[2] py-4 rounded-xl bg-sticky-yellow text-sketch-text-primary font-caveat text-lg font-bold shadow-sketch hover:shadow-sketch-lg hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-2 border-2 border-sketch-text-primary/20 animate-pulse-subtle"
                >
                  <Sparkles className="w-5 h-5" />
                  抉择时刻
@@ -370,10 +371,10 @@ export default function ReadPage() {
                 onClick={goToNextChapter}
                 disabled={!chapter.navigation.next_chapter_id}
                 className={cn(
-                  "flex-1 py-4 rounded-ios-xl flex items-center justify-center gap-2 transition-all disabled:opacity-30 disabled:cursor-not-allowed",
-                  settings.isDark 
-                    ? "bg-white/10 hover:bg-white/20 text-white" 
-                    : "bg-black/80 hover:bg-black text-white shadow-lg"
+                  "flex-1 py-4 rounded-xl flex items-center justify-center gap-2 transition-all font-caveat text-lg font-bold border-2 disabled:opacity-30 disabled:cursor-not-allowed",
+                  settings.isDark
+                    ? "bg-white/10 hover:bg-white/20 text-white border-white/20"
+                    : "bg-sticky-yellow hover:shadow-sketch text-sketch-text-primary border-sketch-text-primary/20"
                 )}
               >
                 下一章
@@ -384,7 +385,7 @@ export default function ReadPage() {
         </div>
       </main>
 
-      {/* 沉浸式互动选择弹窗 */}
+      {/* 沉浸式互动选择弹窗 - Sketch style */}
       <AnimatePresence>
         {showChoices && chapter.choices && chapter.choices.length > 0 && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
@@ -392,23 +393,23 @@ export default function ReadPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-black/60 backdrop-blur-md"
+              className="absolute inset-0 bg-sketch-text-primary/60"
               onClick={() => setShowChoices(false)}
             />
-            
+
             <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-lg bg-white/10 backdrop-blur-2xl border border-white/20 rounded-ios-3xl p-8 shadow-2xl overflow-hidden"
+              className="relative w-full max-w-lg bg-white border-2 border-sketch-text-primary/20 rounded-xl p-8 shadow-sketch overflow-hidden"
             >
-              {/* 背景光效 */}
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-32 bg-purple-500/30 blur-[60px] pointer-events-none" />
+              {/* 装饰条纹 */}
+              <div className="absolute top-0 left-0 right-0 h-2 bg-sticky-yellow" />
 
               <div className="relative z-10 text-center mb-8">
-                <Sparkles className="w-10 h-10 text-amber-300 mx-auto mb-4 animate-spin-slow" />
-                <h2 className="text-2xl font-bold text-white mb-2">命运的分岔路口</h2>
-                <p className="text-white/60 text-sm">你的选择将决定故事的走向</p>
+                <Sparkles className="w-10 h-10 text-sticky-yellow mx-auto mb-4 animate-spin-slow" />
+                <h2 className="text-2xl font-caveat font-bold text-sketch-text-primary mb-2">命运的分岔路口</h2>
+                <p className="text-sketch-text-secondary font-patrick text-sm">你的选择将决定故事的走向</p>
               </div>
 
               <div className="space-y-4 relative z-10">
@@ -419,19 +420,19 @@ export default function ReadPage() {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.1 + 0.2 }}
                     onClick={() => handleChoice(choice, index)}
-                    className="w-full text-left group relative p-5 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/10 hover:border-white/30 transition-all duration-300 overflow-hidden"
+                    className="w-full text-left group relative p-5 rounded-xl bg-sticky-yellow-light hover:bg-sticky-yellow border-2 border-dashed border-sketch-text-secondary/30 hover:border-sketch-text-primary/40 transition-all duration-300 overflow-hidden"
                   >
-                    <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-purple-500 to-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    
+                    <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-sticky-pink opacity-0 group-hover:opacity-100 transition-opacity" />
+
                     <div className="flex items-start gap-4">
-                      <span className="flex-shrink-0 w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white/80 font-serif font-bold group-hover:bg-white group-hover:text-purple-600 transition-colors">
+                      <span className="flex-shrink-0 w-8 h-8 rounded-full bg-white border-2 border-dashed border-sketch-text-secondary/30 flex items-center justify-center text-sketch-text-secondary font-caveat font-bold group-hover:bg-sticky-yellow group-hover:text-sketch-text-primary group-hover:border-sketch-text-primary/30 transition-colors">
                         {String.fromCharCode(65 + index)}
                       </span>
                       <div>
-                         <p className="text-lg font-medium text-white group-hover:text-amber-200 transition-colors">
+                         <p className="text-lg font-patrick font-medium text-sketch-text-primary group-hover:text-sketch-text-primary transition-colors">
                            {choice.choice_text}
                          </p>
-                         <p className="text-xs text-white/40 mt-1 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0">
+                         <p className="text-xs text-sketch-text-muted font-patrick mt-1 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0">
                            <ArrowLeft className="w-3 h-3 rotate-180" /> 点击确认选择
                          </p>
                       </div>
@@ -442,7 +443,7 @@ export default function ReadPage() {
 
               <button
                 onClick={() => setShowChoices(false)}
-                className="w-full mt-6 py-3 text-white/40 text-sm hover:text-white hover:bg-white/5 rounded-xl transition-colors"
+                className="w-full mt-6 py-3 text-sketch-text-muted font-patrick text-sm hover:text-sketch-text-secondary hover:bg-sticky-yellow-light rounded-xl border-2 border-dashed border-transparent hover:border-sketch-text-secondary/20 transition-colors"
               >
                 稍后再选
               </button>

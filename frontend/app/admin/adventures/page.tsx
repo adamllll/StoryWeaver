@@ -109,43 +109,44 @@ export default function AdventuresPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-gray-900">冒险管理</h2>
-          <p className="text-sm text-gray-500">管理所有用户的冒险游戏记录</p>
+          <h2 className="text-2xl font-caveat font-bold tracking-tight text-sketch-text-primary">冒险管理</h2>
+          <p className="text-sm font-patrick text-sketch-text-secondary">管理所有用户的冒险游戏记录</p>
         </div>
         <div className="relative w-64">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
+          <Search className="absolute left-2 top-2.5 h-4 w-4 text-sketch-text-muted" />
           <Input
             placeholder="搜索冒险标题..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-8 bg-white/50 backdrop-blur-sm border-gray-200"
+            className="pl-8"
+            variant="sketch"
           />
         </div>
       </div>
 
-      <div className="rounded-xl border border-gray-200 bg-white/60 backdrop-blur-xl shadow-sm overflow-hidden">
+      <div className="rounded-xl border-2 border-dashed border-sketch-text-secondary/20 bg-white shadow-sketch overflow-hidden">
         <Table>
-          <TableHeader className="bg-gray-50/50">
+          <TableHeader className="bg-sticky-green-light/30">
             <TableRow>
-              <TableHead className="w-[300px]">冒险标题</TableHead>
-              <TableHead>玩家 ID</TableHead>
-              <TableHead>类型</TableHead>
-              <TableHead>状态</TableHead>
-              <TableHead>进度</TableHead>
-              <TableHead>开始时间</TableHead>
-              <TableHead className="text-right">操作</TableHead>
+              <TableHead className="w-[300px] font-patrick">冒险标题</TableHead>
+              <TableHead className="font-patrick">玩家 ID</TableHead>
+              <TableHead className="font-patrick">类型</TableHead>
+              <TableHead className="font-patrick">状态</TableHead>
+              <TableHead className="font-patrick">进度</TableHead>
+              <TableHead className="font-patrick">开始时间</TableHead>
+              <TableHead className="text-right font-patrick">操作</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center text-gray-500">
+                <TableCell colSpan={7} className="h-24 text-center text-sketch-text-secondary font-patrick">
                   加载中...
                 </TableCell>
               </TableRow>
             ) : adventures.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center text-gray-500">
+                <TableCell colSpan={7} className="h-24 text-center text-sketch-text-secondary font-patrick">
                   没有找到冒险记录
                 </TableCell>
               </TableRow>
@@ -154,40 +155,37 @@ export default function AdventuresPage() {
                 <TableRow key={adventure.id}>
                   <TableCell>
                     <div className="flex items-center gap-3">
-                      <div className="h-8 w-8 flex-shrink-0 rounded bg-emerald-100 flex items-center justify-center text-emerald-600">
+                      <div className="h-8 w-8 flex-shrink-0 rounded-lg border-2 border-dashed border-sketch-text-secondary/20 bg-sticky-green flex items-center justify-center text-sketch-text-primary">
                          <Gamepad2 className="h-4 w-4" />
                       </div>
-                      <span className="font-medium text-gray-900 truncate max-w-[200px]" title={adventure.title}>
+                      <span className="font-patrick font-medium text-sketch-text-primary truncate max-w-[200px]" title={adventure.title}>
                         {adventure.title}
                       </span>
                     </div>
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-col">
-                      <span className="text-sm font-medium text-gray-700">{adventure.player_username}</span>
-                      <span className="font-mono text-[10px] text-gray-400">ID: {adventure.player_id}</span>
+                      <span className="text-sm font-patrick font-medium text-sketch-text-primary">{adventure.player_username}</span>
+                      <span className="font-mono text-[10px] text-sketch-text-muted">ID: {adventure.player_id}</span>
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline" className="font-normal text-gray-500">
+                    <Badge variant="sticky-yellow">
                       {adventure.category}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge 
-                      variant={adventure.is_finished ? "secondary" : "default"}
-                      className={adventure.is_finished ? "bg-gray-100 text-gray-600" : "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"}
-                    >
+                    <Badge variant={adventure.is_finished ? "secondary" : "sticky-green"}>
                       {adventure.is_finished ? "已完结" : "进行中"}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <div className="text-xs text-gray-500">
+                    <div className="text-xs text-sketch-text-secondary font-patrick">
                       <div>{adventure.total_nodes} 节点</div>
                       <div>{adventure.total_words} 字</div>
                     </div>
                   </TableCell>
-                  <TableCell className="text-gray-500 text-sm">
+                  <TableCell className="text-sketch-text-secondary text-sm font-patrick">
                     {new Date(adventure.created_at).toLocaleDateString()}
                   </TableCell>
                   <TableCell className="text-right">
@@ -217,13 +215,13 @@ export default function AdventuresPage() {
         </Table>
 
          {/* Pagination */}
-         <div className="flex items-center justify-between px-4 py-4 border-t border-gray-100 bg-gray-50/30">
-          <div className="text-sm text-gray-500">
+         <div className="flex items-center justify-between px-4 py-4 border-t-2 border-dashed border-sketch-text-secondary/20 bg-sticky-green-light/20">
+          <div className="text-sm text-sketch-text-secondary font-patrick">
             显示 {(page - 1) * PAGE_SIZE + 1} 到 {Math.min(page * PAGE_SIZE, total)} 条，共 {total} 条
           </div>
           <div className="flex gap-2">
             <Button
-              variant="outline"
+              variant="sketch-secondary"
               size="sm"
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
@@ -231,7 +229,7 @@ export default function AdventuresPage() {
               上一页
             </Button>
             <Button
-              variant="outline"
+              variant="sketch-secondary"
               size="sm"
               onClick={() => setPage((p) => p + 1)}
               disabled={page * PAGE_SIZE >= total}

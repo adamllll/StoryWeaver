@@ -22,6 +22,14 @@ const config: Config = {
         'ios-bg-alt': '#F9F9FB',
         'ios-reading': '#FAFAF8',
 
+        // ===== Sticky Note Colors (Hand-drawn sketch) =====
+        'sticky-yellow': { light: '#fff9c4', DEFAULT: '#fff59d', dark: '#fff176' },
+        'sticky-pink': { light: '#fce4ec', DEFAULT: '#f8bbd0', dark: '#f48fb1' },
+        'sticky-blue': { light: '#e1f5fe', DEFAULT: '#b3e5fc', dark: '#81d4fa' },
+        'sticky-green': { light: '#e8f5e9', DEFAULT: '#c8e6c9', dark: '#a5d6a7' },
+        // Sketch text colors
+        'sketch-text': { primary: '#2c3e50', secondary: '#34495e', muted: '#7f8c8d' },
+
         // ===== 神秘紫色系 =====
         purple: {
           50: '#FAF5FF',
@@ -93,6 +101,12 @@ const config: Config = {
         'ios-elevated': '0 12px 24px -6px rgba(0, 0, 0, 0.12)',
         'ios-purple': '0 12px 32px -8px rgba(168, 85, 247, 0.3)',
         'ios-inner': 'inset 0 2px 4px 0 rgba(0, 0, 0, 0.05)',
+        // Hand-drawn sketch shadows (hard-edge)
+        'sketch': '4px 4px 0 rgba(0, 0, 0, 0.1)',
+        'sketch-lg': '6px 6px 0 rgba(0, 0, 0, 0.15)',
+        'sketch-sm': '2px 2px 0 rgba(0, 0, 0, 0.08)',
+        'sticky': '0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08)',
+        'sticky-hover': '0 10px 20px rgba(0, 0, 0, 0.15), 0 3px 6px rgba(0, 0, 0, 0.1)',
       },
 
       // ===== 模糊级别 =====
@@ -158,11 +172,20 @@ const config: Config = {
       // ===== 缓动函数 =====
       transitionTimingFunction: {
         'ios': 'cubic-bezier(0.4, 0.0, 0.2, 1)',
+        'sketch': 'cubic-bezier(0.68, -0.55, 0.265, 1.55)',
+      },
+
+      // ===== 动画时长 =====
+      transitionDuration: {
+        'sketch': '300ms',
       },
 
       // ===== 字体 =====
       fontFamily: {
         serif: ['Georgia', 'Cambria', '"Times New Roman"', 'Times', 'serif'],
+        // Hand-drawn sketch fonts with CJK fallback
+        caveat: ['var(--font-caveat)', 'Caveat', 'KaiTi', 'STKaiti', '楷体', 'cursive'],
+        patrick: ['var(--font-patrick)', 'Patrick Hand', 'KaiTi', 'STKaiti', '楷体', 'cursive'],
       },
     },
   },

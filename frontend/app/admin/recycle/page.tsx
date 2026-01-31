@@ -131,84 +131,78 @@ export default function RecycleBinPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-gray-900">回收站</h2>
-          <p className="text-sm text-gray-500">查看并恢复已删除的用户和作品</p>
+          <h2 className="text-2xl font-caveat font-bold tracking-tight text-sketch-text-primary">回收站</h2>
+          <p className="text-sm font-patrick text-sketch-text-secondary">查看并恢复已删除的用户和作品</p>
         </div>
       </div>
 
       <Tabs defaultValue="users" value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full max-w-md grid-cols-2 bg-gray-100/50 p-1 rounded-xl">
-          <TabsTrigger 
-            value="users"
-            className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all duration-200"
-          >
+        <TabsList variant="sketch" className="grid w-full max-w-md grid-cols-2">
+          <TabsTrigger variant="sketch" value="users">
             <Users className="mr-2 h-4 w-4" />
             已删除用户
           </TabsTrigger>
-          <TabsTrigger 
-            value="novels"
-            className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all duration-200"
-          >
+          <TabsTrigger variant="sketch" value="novels">
             <BookOpen className="mr-2 h-4 w-4" />
             已删除作品
           </TabsTrigger>
         </TabsList>
-        
-        <div className="mt-6 rounded-xl border border-gray-200 bg-white/60 backdrop-blur-xl shadow-sm overflow-hidden">
+
+        <div className="mt-6 rounded-xl border-2 border-dashed border-sketch-text-secondary/20 bg-white shadow-sketch overflow-hidden">
           <TabsContent value="users" className="m-0 focus-visible:ring-0 focus-visible:outline-none">
             <Table>
-              <TableHeader className="bg-gray-50/50">
-                <TableRow className="hover:bg-transparent border-b border-gray-100">
-                  <TableHead className="w-[300px]">用户</TableHead>
-                  <TableHead>删除时间</TableHead>
-                  <TableHead>原有角色</TableHead>
-                  <TableHead className="text-right">操作</TableHead>
+              <TableHeader className="bg-sticky-blue-light/30">
+                <TableRow className="hover:bg-transparent border-b-2 border-dashed border-sketch-text-secondary/20">
+                  <TableHead className="w-[300px] font-patrick">用户</TableHead>
+                  <TableHead className="font-patrick">删除时间</TableHead>
+                  <TableHead className="font-patrick">原有角色</TableHead>
+                  <TableHead className="text-right font-patrick">操作</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="h-24 text-center text-gray-500">
+                    <TableCell colSpan={4} className="h-24 text-center text-sketch-text-secondary font-patrick">
                       加载中...
                     </TableCell>
                   </TableRow>
                 ) : users.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="h-32 text-center text-gray-500">
+                    <TableCell colSpan={4} className="h-32 text-center text-sketch-text-secondary font-patrick">
                       <div className="flex flex-col items-center justify-center gap-2">
-                        <Trash2 className="h-8 w-8 text-gray-300" />
+                        <Trash2 className="h-8 w-8 text-sketch-text-muted" />
                         <p>回收站里很干净</p>
                       </div>
                     </TableCell>
                   </TableRow>
                 ) : (
                   users.map((user) => (
-                    <TableRow key={user.id} className="hover:bg-gray-50/50 border-gray-100">
+                    <TableRow key={user.id} className="hover:bg-sticky-blue-light/20 border-sketch-text-secondary/10">
                       <TableCell>
                         <div className="flex items-center gap-3">
-                          <Avatar className="h-9 w-9 border border-gray-200">
+                          <Avatar className="h-9 w-9 border-2 border-dashed border-sketch-text-secondary/20">
                             <AvatarImage src={user.avatar} />
-                            <AvatarFallback>{user.username.slice(0, 2).toUpperCase()}</AvatarFallback>
+                            <AvatarFallback className="bg-sticky-blue text-sketch-text-primary font-patrick">{user.username.slice(0, 2).toUpperCase()}</AvatarFallback>
                           </Avatar>
                           <div className="flex flex-col">
-                            <span className="font-medium text-gray-900">{user.username}</span>
-                            <span className="text-xs text-gray-500">{user.email}</span>
+                            <span className="font-patrick font-medium text-sketch-text-primary">{user.username}</span>
+                            <span className="text-xs text-sketch-text-muted font-patrick">{user.email}</span>
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className="text-gray-500 text-sm">
+                      <TableCell className="text-sketch-text-secondary text-sm font-patrick">
                         {user.deleted_at && formatDistanceToNow(new Date(user.deleted_at.endsWith("Z") ? user.deleted_at : user.deleted_at + "Z"), { addSuffix: true, locale: zhCN })}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className="bg-gray-50 border-gray-200 text-gray-600 font-normal">
+                        <Badge variant="sticky-blue">
                           {user.is_admin ? "管理员" : "普通用户"}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="text-green-600 hover:text-green-700 hover:bg-green-50 rounded-lg"
+                        <Button
+                          variant="sketch-ghost"
+                          size="sm"
+                          className="text-sticky-green hover:text-sketch-text-primary hover:bg-sticky-green-light rounded-xl"
                           onClick={() => setUserToRestore(user)}
                         >
                           <RotateCcw className="mr-2 h-4 w-4" />
@@ -224,54 +218,54 @@ export default function RecycleBinPage() {
 
           <TabsContent value="novels" className="m-0 focus-visible:ring-0 focus-visible:outline-none">
              <Table>
-              <TableHeader className="bg-gray-50/50">
-                <TableRow className="hover:bg-transparent border-b border-gray-100">
-                  <TableHead className="w-[300px]">作品</TableHead>
-                  <TableHead>作者</TableHead>
-                  <TableHead>删除时间</TableHead>
-                  <TableHead>状态</TableHead>
-                  <TableHead className="text-right">操作</TableHead>
+              <TableHeader className="bg-sticky-pink-light/30">
+                <TableRow className="hover:bg-transparent border-b-2 border-dashed border-sketch-text-secondary/20">
+                  <TableHead className="w-[300px] font-patrick">作品</TableHead>
+                  <TableHead className="font-patrick">作者</TableHead>
+                  <TableHead className="font-patrick">删除时间</TableHead>
+                  <TableHead className="font-patrick">状态</TableHead>
+                  <TableHead className="text-right font-patrick">操作</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center text-gray-500">
+                    <TableCell colSpan={5} className="h-24 text-center text-sketch-text-secondary font-patrick">
                       加载中...
                     </TableCell>
                   </TableRow>
                 ) : novels.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="h-32 text-center text-gray-500">
+                    <TableCell colSpan={5} className="h-32 text-center text-sketch-text-secondary font-patrick">
                       <div className="flex flex-col items-center justify-center gap-2">
-                        <Trash2 className="h-8 w-8 text-gray-300" />
+                        <Trash2 className="h-8 w-8 text-sketch-text-muted" />
                         <p>回收站里很干净</p>
                       </div>
                     </TableCell>
                   </TableRow>
                 ) : (
                   novels.map((novel) => (
-                    <TableRow key={novel.id} className="hover:bg-gray-50/50 border-gray-100">
+                    <TableRow key={novel.id} className="hover:bg-sticky-pink-light/20 border-sketch-text-secondary/10">
                       <TableCell>
                         <div className="flex flex-col">
-                          <span className="font-medium text-gray-900">{novel.title}</span>
-                          <span className="text-xs text-gray-500">{novel.category} · {novel.word_count}字</span>
+                          <span className="font-patrick font-medium text-sketch-text-primary">{novel.title}</span>
+                          <span className="text-xs text-sketch-text-muted font-patrick">{novel.category} · {novel.word_count}字</span>
                         </div>
                       </TableCell>
-                      <TableCell className="text-sm text-gray-600">
+                      <TableCell className="text-sm text-sketch-text-primary font-patrick">
                         {novel.author_username}
                       </TableCell>
-                      <TableCell className="text-gray-500 text-sm">
+                      <TableCell className="text-sketch-text-secondary text-sm font-patrick">
                         {novel.deleted_at && formatDistanceToNow(new Date(novel.deleted_at.endsWith("Z") ? novel.deleted_at : novel.deleted_at + "Z"), { addSuffix: true, locale: zhCN })}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="secondary" className="bg-red-50 text-red-600 hover:bg-red-50 border-red-100">已删除</Badge>
+                        <Badge variant="destructive">已删除</Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="text-green-600 hover:text-green-700 hover:bg-green-50 rounded-lg"
+                        <Button
+                          variant="sketch-ghost"
+                          size="sm"
+                          className="text-sticky-green hover:text-sketch-text-primary hover:bg-sticky-green-light rounded-xl"
                           onClick={() => setNovelToRestore(novel)}
                         >
                           <RotateCcw className="mr-2 h-4 w-4" />

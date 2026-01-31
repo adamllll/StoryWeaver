@@ -141,44 +141,45 @@ export default function UsersPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-gray-900">用户管理</h2>
-          <p className="text-sm text-gray-500">管理所有注册用户及其权限</p>
+          <h2 className="text-2xl font-caveat font-bold tracking-tight text-sketch-text-primary">用户管理</h2>
+          <p className="text-sm font-patrick text-sketch-text-secondary">管理所有注册用户及其权限</p>
         </div>
         <div className="flex items-center gap-2">
            <div className="relative w-64">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-sketch-text-muted" />
             <Input
               placeholder="搜索用户..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-8 bg-white/50 backdrop-blur-sm border-gray-200"
+              className="pl-8"
+              variant="sketch"
             />
           </div>
         </div>
       </div>
 
-      <div className="rounded-xl border border-gray-200 bg-white/60 backdrop-blur-xl shadow-sm overflow-hidden">
+      <div className="rounded-xl border-2 border-dashed border-sketch-text-secondary/20 bg-white shadow-sketch overflow-hidden">
         <Table>
-          <TableHeader className="bg-gray-50/50">
+          <TableHeader className="bg-sticky-blue-light/30">
             <TableRow>
-              <TableHead className="w-[250px]">用户</TableHead>
-              <TableHead>状态</TableHead>
-              <TableHead>角色</TableHead>
-              <TableHead>最后登录</TableHead>
-              <TableHead>注册时间</TableHead>
-              <TableHead className="text-right">操作</TableHead>
+              <TableHead className="w-[250px] font-patrick">用户</TableHead>
+              <TableHead className="font-patrick">状态</TableHead>
+              <TableHead className="font-patrick">角色</TableHead>
+              <TableHead className="font-patrick">最后登录</TableHead>
+              <TableHead className="font-patrick">注册时间</TableHead>
+              <TableHead className="text-right font-patrick">操作</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center text-gray-500">
+                <TableCell colSpan={6} className="h-24 text-center text-sketch-text-secondary font-patrick">
                   加载中...
                 </TableCell>
               </TableRow>
             ) : users.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center text-gray-500">
+                <TableCell colSpan={6} className="h-24 text-center text-sketch-text-secondary font-patrick">
                   没有找到用户
                 </TableCell>
               </TableRow>
@@ -189,34 +190,34 @@ export default function UsersPage() {
                     <div className="flex items-center gap-3">
                       <Avatar>
                         <AvatarImage src={user.avatar} />
-                        <AvatarFallback>{user.username.slice(0, 2).toUpperCase()}</AvatarFallback>
+                        <AvatarFallback className="bg-sticky-blue text-sketch-text-primary font-patrick">{user.username.slice(0, 2).toUpperCase()}</AvatarFallback>
                       </Avatar>
                       <div className="flex flex-col">
-                        <span className="font-medium text-gray-900">{user.username}</span>
-                        <span className="text-xs text-gray-500">{user.email}</span>
+                        <span className="font-patrick font-medium text-sketch-text-primary">{user.username}</span>
+                        <span className="text-xs text-sketch-text-muted font-patrick">{user.email}</span>
                       </div>
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={user.is_active ? "outline" : "destructive"} className={user.is_active ? "bg-green-50 text-green-700 border-green-200" : ""}>
+                    <Badge variant={user.is_active ? "sticky-green" : "destructive"}>
                       {user.is_active ? "正常" : "禁用"}
                     </Badge>
                   </TableCell>
                   <TableCell>
                     {user.is_admin ? (
-                      <Badge variant="default" className="bg-purple-100 text-purple-700 hover:bg-purple-200 border-purple-200">
+                      <Badge variant="sticky-blue">
                         <Shield className="w-3 h-3 mr-1" /> 管理员
                       </Badge>
                     ) : (
-                      <span className="text-sm text-gray-500">普通用户</span>
+                      <span className="text-sm text-sketch-text-secondary font-patrick">普通用户</span>
                     )}
                   </TableCell>
-                  <TableCell className="text-gray-500 text-sm">
+                  <TableCell className="text-sketch-text-secondary text-sm font-patrick">
                     {user.last_login_at
                       ? formatDistanceToNow(new Date(user.last_login_at.endsWith("Z") ? user.last_login_at : user.last_login_at + "Z"), { addSuffix: true, locale: zhCN })
                       : "从未登录"}
                   </TableCell>
-                  <TableCell className="text-gray-500 text-sm">
+                  <TableCell className="text-sketch-text-secondary text-sm font-patrick">
                     {new Date(user.created_at).toLocaleDateString()}
                   </TableCell>
                   <TableCell className="text-right">
@@ -268,13 +269,13 @@ export default function UsersPage() {
         </Table>
         
         {/* Pagination */}
-        <div className="flex items-center justify-between px-4 py-4 border-t border-gray-100 bg-gray-50/30">
-          <div className="text-sm text-gray-500">
+        <div className="flex items-center justify-between px-4 py-4 border-t-2 border-dashed border-sketch-text-secondary/20 bg-sticky-blue-light/20">
+          <div className="text-sm text-sketch-text-secondary font-patrick">
             显示 {(page - 1) * PAGE_SIZE + 1} 到 {Math.min(page * PAGE_SIZE, total)} 条，共 {total} 条
           </div>
           <div className="flex gap-2">
             <Button
-              variant="outline"
+              variant="sketch-secondary"
               size="sm"
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
@@ -282,7 +283,7 @@ export default function UsersPage() {
               上一页
             </Button>
             <Button
-              variant="outline"
+              variant="sketch-secondary"
               size="sm"
               onClick={() => setPage((p) => p + 1)}
               disabled={page * PAGE_SIZE >= total}

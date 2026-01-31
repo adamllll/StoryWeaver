@@ -22,7 +22,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { Header } from "@/components/layout/Header";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SkeletonSketchGrid } from "@/components/ui/skeleton-sketch";
 
 export default function WorkspacePage() {

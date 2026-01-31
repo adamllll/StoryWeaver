@@ -1,5 +1,6 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, waitFor, act } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import WorkspacePage from '@/app/workspace/page';
 import { novelsApi } from '@/lib/api';
 import { useAuthStore } from '@/lib/store';
@@ -91,9 +92,13 @@ describe('WorkspacePage', () => {
     (novelsApi.list as jest.Mock).mockReturnValue(promise);
 
     render(<WorkspacePage />);
-    
-    expect(screen.getByText('加载中...')).toBeInTheDocument();
-    
+
+    // 加载状态下显示 skeleton (animate-pulse) 而不是小说列表
+    expect(screen.queryByText('已发布小说')).not.toBeInTheDocument();
+    expect(screen.queryByText('草稿小说')).not.toBeInTheDocument();
+    // 页面标题仍然显示
+    expect(screen.getByText('我的创作')).toBeInTheDocument();
+
     await act(async () => {
       // @ts-ignore
       resolvePromise({ novels: [] });
@@ -112,35 +117,42 @@ describe('WorkspacePage', () => {
   });
 
   it('filters novels correctly', async () => {
+    const user = userEvent.setup();
     render(<WorkspacePage />);
 
     await waitFor(() => {
       expect(screen.getByText('已发布小说')).toBeInTheDocument();
     });
 
-    // 点击"已发布"
-    fireEvent.click(screen.getByRole('button', { name: '已发布' }));
+    // 点击"已发布" (TabsTrigger renders as role="tab")
+    await user.click(screen.getByRole('tab', { name: '已发布' }));
 
-    // 应该只显示已发布的小说
-    expect(screen.getByText('已发布小说')).toBeInTheDocument();
-    expect(screen.queryByText('草稿小说')).not.toBeInTheDocument();
-    expect(screen.getByText('共 1 部作品')).toBeInTheDocument();
+    // 应该只显示已发布的小说 (等待状态更新)
+    await waitFor(() => {
+      expect(screen.getByText('已发布小说')).toBeInTheDocument();
+      expect(screen.queryByText('草稿小说')).not.toBeInTheDocument();
+      expect(screen.getByText('共 1 部作品')).toBeInTheDocument();
+    });
 
-    // 点击"草稿箱"
-    fireEvent.click(screen.getByRole('button', { name: '草稿箱' }));
+    // 点击"草稿箱" (TabsTrigger renders as role="tab")
+    await user.click(screen.getByRole('tab', { name: '草稿箱' }));
 
-    // 应该只显示草稿
-    expect(screen.queryByText('已发布小说')).not.toBeInTheDocument();
-    expect(screen.getByText('草稿小说')).toBeInTheDocument();
-    expect(screen.getByText('共 1 部作品')).toBeInTheDocument();
+    // 应该只显示草稿 (等待状态更新)
+    await waitFor(() => {
+      expect(screen.queryByText('已发布小说')).not.toBeInTheDocument();
+      expect(screen.getByText('草稿小说')).toBeInTheDocument();
+      expect(screen.getByText('共 1 部作品')).toBeInTheDocument();
+    });
 
-    // 点击"全部作品"
-    fireEvent.click(screen.getByRole('button', { name: '全部作品' }));
+    // 点击"全部作品" (TabsTrigger renders as role="tab")
+    await user.click(screen.getByRole('tab', { name: '全部作品' }));
 
-    // 应该显示所有
-    expect(screen.getByText('已发布小说')).toBeInTheDocument();
-    expect(screen.getByText('草稿小说')).toBeInTheDocument();
-    expect(screen.getByText('共 2 部作品')).toBeInTheDocument();
+    // 应该显示所有 (等待状态更新)
+    await waitFor(() => {
+      expect(screen.getByText('已发布小说')).toBeInTheDocument();
+      expect(screen.getByText('草稿小说')).toBeInTheDocument();
+      expect(screen.getByText('共 2 部作品')).toBeInTheDocument();
+    });
   });
 
   it('renders empty state when no novels found', async () => {

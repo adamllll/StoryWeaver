@@ -9,15 +9,12 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import {
   BookOpen,
-  ArrowLeft,
   User,
   Clock,
   FileText,
-  Loader2,
   BookmarkPlus,
   Play,
   Sparkles,
-  Share2,
   Info,
   List
 } from "lucide-react";
@@ -33,7 +30,7 @@ export default function NovelDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { toast } = useToast();
-  const { isAuthenticated, user } = useAuthStore();
+  const { isAuthenticated: _isAuthenticated, user: _user } = useAuthStore();
   const [novel, setNovel] = useState<NovelDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 

@@ -35,6 +35,8 @@ const nextConfig = {
   },
 
   experimental: {
+    cpus: 1, // Serialize static generation on the small deployment host.
+    webpackBuildWorker: false, // Avoid a second compiler heap under the 768 MiB build cap.
     serverComponentsExternalPackages: ["isomorphic-dompurify", "jsdom"],
   },
 };

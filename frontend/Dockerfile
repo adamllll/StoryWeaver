@@ -18,9 +18,11 @@ COPY . .
 # 设置生产环境变量
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
+ARG NODE_HEAP_MB=4096
+ENV NODE_OPTIONS=--max-old-space-size=${NODE_HEAP_MB}
 
-# 构建应用
-RUN npm run build
+# 构建应用；Next 14 may exit zero after a killed worker, so require real artifacts.
+RUN npm run build && test -s .next/standalone/server.js && test -s .next/BUILD_ID
 
 # ========== 生产运行阶段 ==========
 FROM node:20-alpine AS runner
@@ -55,7 +57,7 @@ ENV HOSTNAME="0.0.0.0"
 
 # 健康检查
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1
+    CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/ || exit 1
 
 # 启动命令（standalone 模式）
 CMD ["node", "server.js"]

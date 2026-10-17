@@ -57,6 +57,7 @@ export function AdventureBranchTree({ tree, onNodeClick, height = 520 }: Adventu
 
   const option = useMemo<EChartsOption>(() => ({
     tooltip: {
+      renderMode: "richText", // Native text rendering: user titles must never become tooltip HTML.
       trigger: "item",
       triggerOn: "mousemove",
       backgroundColor: "rgba(15, 23, 42, 0.92)",
@@ -73,18 +74,16 @@ export function AdventureBranchTree({ tree, onNodeClick, height = 520 }: Adventu
           ? `从第 ${meta.fork_from_chapter} 章分叉`
           : "原始冒险";
         const status = meta.is_finished ? "已完结" : "进行中";
-        return `
-          <div style="min-width: 180px; line-height: 1.6;">
-            <div style="font-weight: 700; margin-bottom: 6px;">${data.name}</div>
-            <div>玩家：${meta.player_name}</div>
-            <div>类型：${meta.category}</div>
-            <div>章节：${meta.total_nodes} 章</div>
-            <div>字数：${meta.total_words.toLocaleString()} 字</div>
-            <div>分叉：${meta.fork_count} 条</div>
-            <div>状态：${status}</div>
-            <div style="margin-top: 6px; color: rgba(226, 232, 240, 0.8);">${forkInfo}</div>
-          </div>
-        `;
+        return [
+          data.name,
+          `玩家：${meta.player_name}`,
+          `类型：${meta.category}`,
+          `章节：${meta.total_nodes} 章`,
+          `字数：${meta.total_words.toLocaleString()} 字`,
+          `分叉：${meta.fork_count} 条`,
+          `状态：${status}`,
+          forkInfo,
+        ].join("\n");
       },
     },
     series: [

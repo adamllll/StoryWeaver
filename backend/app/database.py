@@ -67,12 +67,9 @@ def _migrate_add_missing_columns():
             result = conn.execute(text(f"PRAGMA table_info({table})"))
             columns = [row[1] for row in result.fetchall()]
             if column not in columns:
-                try:
-                    conn.execute(text(sql))
-                    conn.commit()
-                    print(f"[迁移] 已添加列: {table}.{column}")
-                except Exception as e:
-                    print(f"[迁移] 添加列 {table}.{column} 失败: {e}")
+                conn.execute(text(sql))
+                conn.commit()
+                print(f"[迁移] 已添加列: {table}.{column}")
 
 
 def init_db():
@@ -92,6 +89,30 @@ def init_db():
 
     # 迁移：为已存在的表添加缺失的列
     _migrate_add_missing_columns()
+
+    # Existing SQLite databases are unversioned: use the same idempotent upgrade
+    # as Alembic rather than replaying its initial create-table revision.
+    from .migrations import migrate_cached_counts
+    with engine.connect() as conn:
+        if conn.dialect.name == 'sqlite':
+            foreign_keys = conn.exec_driver_sql('PRAGMA foreign_keys').scalar()
+            conn.commit()
+            conn.exec_driver_sql('PRAGMA foreign_keys=OFF')
+            conn.commit()
+            try:
+                # Explicit BEGIN makes SQLite DDL and backfill atomic together.
+                conn.exec_driver_sql('BEGIN IMMEDIATE')
+                migrate_cached_counts(conn)
+                conn.commit()
+            except Exception:
+                conn.rollback()
+                raise
+            finally:
+                conn.exec_driver_sql(f'PRAGMA foreign_keys={int(foreign_keys)}')
+                conn.commit()
+        else:
+            with conn.begin():
+                migrate_cached_counts(conn)
 
     # 创建默认管理员账号（如果不存在）
     _create_default_admin()

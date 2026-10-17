@@ -1,0 +1,18 @@
+[
+  {
+    "file": "Caveat-latin.woff2",
+    "css_url": "https://fonts.googleapis.com/css2?family=Caveat:wght@400..700&display=swap",
+    "font_url": "https://fonts.gstatic.com/s/caveat/v23/Wnz6HAc5bAfYB2Q7ZjYYiAzcPA.woff2",
+    "bytes": 74572,
+    "sha256": "7a0049db01fdd8fc7af7ef36675862a72a5c76d0cb45ae63c9f5b6f1b769dac7",
+    "css_weight": "400 700"
+  },
+  {
+    "file": "PatrickHand-latin.woff2",
+    "css_url": "https://fonts.googleapis.com/css2?family=Patrick+Hand:wght@400&display=swap",
+    "font_url": "https://fonts.gstatic.com/s/patrickhand/v25/LDI1apSQOAYtSuYWp8ZhfYe8XsLLubg58w.woff2",
+    "bytes": 14224,
+    "sha256": "42156e008dd5fc3000679ff4e9ba9cbd3f417b6317c6dcbe11a12e9c87a09b28",
+    "css_weight": "400"
+  }
+]

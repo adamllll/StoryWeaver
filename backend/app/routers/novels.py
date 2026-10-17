@@ -206,11 +206,7 @@ async def list_novels(
 
     # 处理状态筛选逻辑
     effective_status = status
-    if not status and not user_id:
-        # 默认只显示已发布的小说
-        effective_status = "published"
-    elif user_id and current_user and current_user.id != user_id:
-        # 查看其他用户的小说，只显示已发布的
+    if not (current_user and user_id == current_user.id):
         effective_status = "published"
 
     # 使用 Service 层获取小说列表

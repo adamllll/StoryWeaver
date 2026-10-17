@@ -57,6 +57,26 @@ class TestListNovels:
         assert data["total"] == 1
         assert data["novels"][0]["id"] == test_novel.id
 
+    def test_anonymous_author_filter_hides_drafts(self, client, test_user, test_novel):
+        client.cookies.clear()  # Module-scoped client may retain a previous login.
+        for query in [f"?user_id={test_user.id}", f"?user_id={test_user.id}&status=draft", "?status=draft"]:
+            response = client.get('/api/novels' + query)
+            assert response.status_code == 200
+            assert all(n['status'] == 'published' for n in response.json()['novels'])
+
+    def test_live_counts_follow_chapter_writes(self, client, test_novel, auth_headers):
+        url = f'/api/novels/{test_novel.id}'
+        created = client.post(url + '/chapters', headers=auth_headers, json={'title': 'Count regression', 'content': '你好abc'})
+        assert created.status_code == 201
+        chapter_url = url + '/chapters/' + str(created.json()['id'])
+        detail = client.get(url, headers=auth_headers).json()
+        assert (detail['chapter_count'], detail['word_count']) == (1, 5)
+        assert client.put(chapter_url, headers=auth_headers, json={'content': 'abc'}).status_code == 200
+        assert client.get(url, headers=auth_headers).json()['word_count'] == 3
+        assert client.delete(chapter_url, headers=auth_headers).status_code == 204
+        detail = client.get(url, headers=auth_headers).json()
+        assert (detail['chapter_count'], detail['word_count']) == (0, 0)
+
     def test_list_novels_pagination(self, client, auth_headers):
         """测试分页"""
         # 通过 API 创建多个已发布小说

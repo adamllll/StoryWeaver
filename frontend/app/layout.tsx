@@ -1,18 +1,19 @@
 import "./globals.css";
-import { Caveat, Patrick_Hand } from "next/font/google";
+import localFont from "next/font/local";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/components/providers/auth-provider";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
-const caveat = Caveat({
-  subsets: ["latin"],
+const caveat = localFont({
+  src: "../public/fonts/Caveat-latin.woff2",
+  weight: "400 700",
   variable: "--font-caveat",
   display: "swap",
 });
 
-const patrickHand = Patrick_Hand({
+const patrickHand = localFont({
+  src: "../public/fonts/PatrickHand-latin.woff2",
   weight: "400",
-  subsets: ["latin"],
   variable: "--font-patrick",
   display: "swap",
 });
